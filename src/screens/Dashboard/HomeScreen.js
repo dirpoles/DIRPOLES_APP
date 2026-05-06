@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { COLORS } from '../../constants/config';
+import { useAuth } from '../../context/AuthContext';
 import { Calendar as CalendarIcon, Clock, ChevronRight } from 'lucide-react-native';
 
 // Configuración de idioma para el calendario (Español)
 LocaleConfig.locales['es'] = {
-  monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
-  monthNamesShort: ['Ene.','Feb.','Mar.','Abr.','May.','Jun.','Jul.','Ago.','Sep.','Oct.','Nov.','Dic.'],
-  dayNames: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
-  dayNamesShort: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
+  monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+  monthNamesShort: ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Jun.', 'Jul.', 'Ago.', 'Sep.', 'Oct.', 'Nov.', 'Dic.'],
+  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+  dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
   today: 'Hoy'
 };
 LocaleConfig.defaultLocale = 'es';
@@ -20,6 +21,7 @@ LocaleConfig.defaultLocale = 'es';
  * Contiene el calendario de citas central y un resumen rápido.
  */
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState('');
 
   // Ejemplo de fechas marcadas (citas)
@@ -33,11 +35,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         {/* Sección de Bienvenida */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>Panel de Control</Text>
-          <Text style={styles.subtitle}>Calendario de Citas Médicas</Text>
+          <Text style={styles.greeting}>¡Hola, {user?.nombre || 'Usuario'}!</Text>
+          <Text style={styles.roleText}>{user?.tipo_empleado || 'Personal'}</Text>
+          <Text style={styles.subtitle}>Panel de Control - Citas Médicas</Text>
         </View>
 
         {/* Calendario Central */}
@@ -119,14 +122,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  roleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
   },
   calendarCard: {
     backgroundColor: COLORS.surface,
