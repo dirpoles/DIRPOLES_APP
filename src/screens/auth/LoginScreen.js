@@ -15,6 +15,8 @@ import { TextInput, Button, IconButton, useTheme, ActivityIndicator } from 'reac
 import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../constants/config';
+import { validateField } from '../../utils/validators';
+import CustomModal from '../../components/UI/CustomModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,21 +27,47 @@ const { width, height } = Dimensions.get('window');
  * Maneja el comportamiento del teclado mediante KeyboardAvoidingView.
  */
 export default function LoginScreen() {
-  // Estado del formulario
+  // Estado del formulario y errores
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ correo: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Estado del Modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info' });
+
   const { login } = useAuth();
+
+  /**
+   * Valida un campo en tiempo real
+   */
+  const handleInputChange = (field, value) => {
+    if (field === 'correo') setCorreo(value);
+    if (field === 'password') setPassword(value);
+
+    // Validación en tiempo real (SOLID: Lógica externa)
+    const error = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: error }));
+  };
 
   /**
    * Maneja el intento de inicio de sesión
    */
   const handleLogin = async () => {
-    // Validaciones básicas
-    if (!correo || !password) {
-      Alert.alert('Campos incompletos', 'Por favor ingresa tu correo y contraseña.');
+    // Validar ambos campos antes de enviar
+    const errorCorreo = validateField('correo', correo);
+    const errorPass = validateField('password', password);
+
+    if (errorCorreo || errorPass) {
+      setErrors({ correo: errorCorreo, password: errorPass });
+      setModalConfig({
+        title: 'Formulario Incompleto',
+        message: 'Por favor, corrige los errores en el formulario antes de continuar.',
+        type: 'warning'
+      });
+      setModalVisible(true);
       return;
     }
 
@@ -47,10 +75,20 @@ export default function LoginScreen() {
     try {
       const result = await login(correo, password);
       if (!result.success) {
-        Alert.alert('Error de Acceso', result.message);
+        setModalConfig({
+          title: 'Error de Acceso',
+          message: result.message,
+          type: 'error'
+        });
+        setModalVisible(true);
       }
     } catch (error) {
-      Alert.alert('Error', 'Ocurrió un problema inesperado.');
+      setModalConfig({
+        title: 'Error Inesperado',
+        message: 'No se pudo conectar con el servidor.',
+        type: 'error'
+      });
+      setModalVisible(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -82,44 +120,51 @@ export default function LoginScreen() {
             <Text style={styles.instructionText}>Ingresa tus credenciales para continuar</Text>
 
             {/* Input Correo */}
-            <TextInput
-              label="Correo Electrónico"
-              value={correo}
-              onChangeText={setCorreo}
-              mode="outlined"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              outlineColor={COLORS.border}
-              activeOutlineColor={COLORS.primary}
-              style={styles.input}
-              placeholder="ejemplo@correo.com"
-              left={<TextInput.Icon icon={() => <Mail size={20} color={COLORS.secondary} />} />}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                label="Correo Electrónico"
+                value={correo}
+                onChangeText={(val) => handleInputChange('correo', val)}
+                mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={!!errors.correo}
+                outlineColor={COLORS.border}
+                activeOutlineColor={COLORS.primary}
+                style={styles.input}
+                placeholder="ejemplo@correo.com"
+                left={<TextInput.Icon icon={() => <Mail size={20} color={errors.correo ? COLORS.danger : COLORS.secondary} />} />}
+              />
+              {errors.correo ? <Text style={styles.errorText}>{errors.correo}</Text> : null}
+            </View>
 
             {/* Input Contraseña */}
-            <TextInput
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              secureTextEntry={!showPassword}
-              outlineColor={COLORS.border}
-              activeOutlineColor={COLORS.primary}
-              style={styles.input}
-              placeholder="••••••••"
-              left={<TextInput.Icon icon={() => <Lock size={20} color={COLORS.secondary} />} />}
-              right={
-                <TextInput.Icon
-                  icon={() => (
-                    showPassword ?
-                      <EyeOff size={20} color={COLORS.secondary} /> :
-                      <Eye size={20} color={COLORS.secondary} />
-                  )}
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                label="Contraseña"
+                value={password}
+                onChangeText={(val) => handleInputChange('password', val)}
+                mode="outlined"
+                secureTextEntry={!showPassword}
+                error={!!errors.password}
+                outlineColor={COLORS.border}
+                activeOutlineColor={COLORS.primary}
+                style={styles.input}
+                placeholder="••••••••"
+                left={<TextInput.Icon icon={() => <Lock size={20} color={errors.password ? COLORS.danger : COLORS.secondary} />} />}
+                right={
+                  <TextInput.Icon
+                    icon={() => (
+                      showPassword ?
+                        <EyeOff size={20} color={COLORS.secondary} /> :
+                        <Eye size={20} color={COLORS.secondary} />
+                    )}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+              />
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+            </View>
 
             {/* Olvidé mi contraseña */}
             <View style={styles.forgotContainer}>
@@ -146,6 +191,15 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal Personalizado */}
+      <CustomModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
     </SafeAreaView>
   );
 }
@@ -220,9 +274,18 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 24,
   },
-  input: {
+  inputWrapper: {
     marginBottom: 16,
+  },
+  input: {
     backgroundColor: COLORS.surface,
+  },
+  errorText: {
+    color: COLORS.danger,
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   forgotContainer: {
     alignItems: 'flex-end',

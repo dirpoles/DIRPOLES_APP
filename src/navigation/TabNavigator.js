@@ -13,6 +13,8 @@ import CitasScreen from '../screens/citas/CitasScreen';
 import InventarioScreen from '../screens/inventario/InventarioScreen';
 import ReportesScreen from '../screens/reportes/ReportesScreen';
 
+import CustomModal from '../components/UI/CustomModal';
+
 const Tab = createBottomTabNavigator();
 
 /**
@@ -22,89 +24,107 @@ const Tab = createBottomTabNavigator();
  */
 export default function TabNavigator() {
   const { logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   return (
-    <Tab.Navigator
-      screenOptions={({ navigation }) => ({
-        headerStyle: {
-          backgroundColor: COLORS.surface,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: COLORS.border,
-        },
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          color: COLORS.primary,
-        },
-        headerRight: () => (
-          <View style={styles.headerRight}>
-            <TouchableOpacity 
-              onPress={() => {/* Lógica de perfil */}}
-              style={styles.headerButton}
-            >
-              <User size={22} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={logout}
-              style={styles.headerButton}
-            >
-              <LogOut size={22} color={COLORS.danger} />
-            </TouchableOpacity>
-          </View>
-        ),
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
-          paddingTop: 10,
-          backgroundColor: COLORS.surface,
-          borderTopWidth: 1,
-          borderTopColor: COLORS.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        }
-      })}
-    >
-      <Tab.Screen 
-        name="Inicio" 
-        component={HomeScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+    <>
+      <Tab.Navigator
+        screenOptions={({ navigation }) => ({
+          headerStyle: {
+            backgroundColor: COLORS.surface,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: COLORS.border,
+          },
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            color: COLORS.primary,
+          },
+          headerRight: () => (
+            <View style={styles.headerRight}>
+              <TouchableOpacity 
+                onPress={() => {/* Lógica de perfil */}}
+                style={styles.headerButton}
+              >
+                <User size={22} color={COLORS.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setShowLogoutModal(true)}
+                style={styles.headerButton}
+              >
+                <LogOut size={22} color={COLORS.danger} />
+              </TouchableOpacity>
+            </View>
+          ),
+          tabBarActiveTintColor: COLORS.primary,
+          tabBarInactiveTintColor: COLORS.textMuted,
+          tabBarStyle: {
+            height: 65,
+            paddingBottom: 10,
+            paddingTop: 10,
+            backgroundColor: COLORS.surface,
+            borderTopWidth: 1,
+            borderTopColor: COLORS.border,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+          }
+        })}
+      >
+        <Tab.Screen 
+          name="Inicio" 
+          component={HomeScreen} 
+          options={{
+            tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          }}
+        />
+        <Tab.Screen 
+          name="Beneficiarios" 
+          component={BeneficiariosScreen} 
+          options={{
+            tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
+          }}
+        />
+        <Tab.Screen 
+          name="Citas" 
+          component={CitasScreen} 
+          options={{
+            tabBarIcon: ({ color, size }) => <CalendarDays size={size} color={color} />,
+          }}
+        />
+        <Tab.Screen 
+          name="Inventario" 
+          component={InventarioScreen} 
+          options={{
+            tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
+          }}
+        />
+        <Tab.Screen 
+          name="Reportes" 
+          component={ReportesScreen} 
+          options={{
+            tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
+          }}
+        />
+      </Tab.Navigator>
+
+      {/* Modal de Confirmación de Cierre de Sesión */}
+      <CustomModal
+        visible={showLogoutModal}
+        type="question"
+        title="¿Cerrar Sesión?"
+        message="¿Estás seguro de que deseas salir de DIRPOLES Mobile?"
+        cancelText="No, quedarme"
+        confirmText="Sí, salir"
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={() => {
+          setShowLogoutModal(false);
+          logout();
         }}
       />
-      <Tab.Screen 
-        name="Beneficiarios" 
-        component={BeneficiariosScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen 
-        name="Citas" 
-        component={CitasScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => <CalendarDays size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen 
-        name="Inventario" 
-        component={InventarioScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen 
-        name="Reportes" 
-        component={ReportesScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
-        }}
-      />
-    </Tab.Navigator>
+    </>
   );
 }
 

@@ -78,3 +78,25 @@ Cada pantalla del Dashboard incluye una cabecera global:
 Se integró la librería `react-native-calendars` para el centro del Dashboard:
 - **Funcionalidad**: Visualización de citas programadas y selección de fechas.
 - **Localización**: Configurado totalmente en español.
+
+## 8. Sistema de Validaciones y Feedback (SOLID)
+
+Para garantizar la integridad de los datos y una experiencia de usuario premium, se implementó un sistema de validación robusto.
+
+### A. Validadores Centralizados (`src/utils/validators.js`)
+- **Responsabilidad**: Contener las reglas de negocio y expresiones regulares.
+- **Lógica**: Utiliza los mismos Regex de **DIRPOLES_4**:
+    - **Email**: Solo permite dominios específicos (hotmail, gmail, yahoo, outlook) y extensiones (.com, .es, .net, .org).
+    - **Password**: Requiere exactamente 8 caracteres con al menos una letra.
+- **Uso**: La función `validateField` devuelve el mensaje de error específico para cada campo.
+
+### B. Validaciones en Tiempo Real
+- **Implementación**: En `LoginScreen.js`, el evento `onChangeText` dispara la validación de forma inmediata.
+- **UX**: Los mensajes de error se muestran dinámicamente debajo de cada input, y el componente `TextInput` cambia su estado visual (color rojo) automáticamente.
+
+### C. Componente Reutilizable: `CustomModal` (`src/components/UI/CustomModal.js`)
+- **Responsabilidad**: Mostrar alertas personalizadas con una estética superior a los diálogos nativos.
+- **Características**:
+    - **Temas Dinámicos**: Cambia de color (Verde, Rojo, Azul, Naranja) e icono según el tipo (`success`, `error`, `info`, `warning`).
+    - **Animaciones**: Entrada suave tipo "Fade" con overlay semi-transparente.
+    - **Independencia**: Diseñado para ser usado en cualquier parte de la aplicación simplemente pasando los props necesarios.

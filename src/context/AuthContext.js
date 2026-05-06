@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
    * Procesa el login usando el servicio de autenticación
    */
   const login = async (correo, password) => {
-    setIsLoading(true);
+    // No usamos setIsLoading(true) aquí para evitar que AppNavigator desmonte la UI
     const result = await authService.login(correo, password);
     
     if (result.success) {
@@ -46,7 +46,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     }
     
-    setIsLoading(false);
     return result;
   };
 
