@@ -1,20 +1,63 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, View, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { Text } from 'react-native-paper';
 import { COLORS } from '../../constants/config';
-import { Users } from 'lucide-react-native';
+import BeneficiarioForm from '../../components/Beneficiarios/BeneficiarioForm';
 
+/**
+ * Esta pantalla actúa como un contenedor para el componente del formulario.
+ */
 export default function BeneficiariosScreen() {
+
+  const handleFormSubmit = (data) => {
+    console.log('Enviando datos del Beneficiario:', data);
+    // Aquí irá la lógica para llamar al servicio más adelante
+  };
+
   return (
-    <View style={styles.container}>
-      <Users size={64} color={COLORS.primary} strokeWidth={1.5} />
-      <Text style={styles.title}>Beneficiarios</Text>
-      <Text style={styles.subtitle}>Módulo en desarrollo</Text>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerSection}>
+            <Text style={styles.title}>Beneficiarios</Text>
+            <Text style={styles.subtitle}>Gestión y registro de Beneficiarios</Text>
+          </View>
+
+          {/* Llamamos al componente reutilizable */}
+          <BeneficiarioForm onSubmit={handleFormSubmit} />
+
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginTop: 16 },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary, marginTop: 8 }
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  headerSection: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
 });
