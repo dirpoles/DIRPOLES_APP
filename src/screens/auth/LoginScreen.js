@@ -13,9 +13,8 @@ import {
 } from 'react-native';
 import { TextInput, Button, IconButton, useTheme, ActivityIndicator } from 'react-native-paper';
 import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
-import { useAuth } from '../../context/AuthContext';
+import { useLoginForm } from '../../hooks/useLoginForm';
 import { COLORS } from '../../constants/config';
-import { validateField } from '../../utils/validators';
 import CustomModal from '../../components/UI/CustomModal';
 
 const { width, height } = Dimensions.get('window');
@@ -27,72 +26,18 @@ const { width, height } = Dimensions.get('window');
  * Maneja el comportamiento del teclado mediante KeyboardAvoidingView.
  */
 export default function LoginScreen() {
-  // Estado del formulario y errores
-  const [correo, setCorreo] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({ correo: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Estado del Modal
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info' });
-
-  const { login } = useAuth();
-
-  /**
-   * Valida un campo en tiempo real
-   */
-  const handleInputChange = (field, value) => {
-    if (field === 'correo') setCorreo(value);
-    if (field === 'password') setPassword(value);
-
-    // Validación en tiempo real (SOLID: Lógica externa)
-    const error = validateField(field, value);
-    setErrors(prev => ({ ...prev, [field]: error }));
-  };
-
-  /**
-   * Maneja el intento de inicio de sesión
-   */
-  const handleLogin = async () => {
-    // Validar ambos campos antes de enviar
-    const errorCorreo = validateField('correo', correo);
-    const errorPass = validateField('password', password);
-
-    if (errorCorreo || errorPass) {
-      setErrors({ correo: errorCorreo, password: errorPass });
-      setModalConfig({
-        title: 'Formulario Incompleto',
-        message: 'Por favor, corrige los errores en el formulario antes de continuar.',
-        type: 'warning'
-      });
-      setModalVisible(true);
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await login(correo, password);
-      if (!result.success) {
-        setModalConfig({
-          title: 'Error de Acceso',
-          message: result.message,
-          type: 'error'
-        });
-        setModalVisible(true);
-      }
-    } catch (error) {
-      setModalConfig({
-        title: 'Error Inesperado',
-        message: 'No se pudo conectar con el servidor.',
-        type: 'error'
-      });
-      setModalVisible(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    showPassword,
+    setShowPassword,
+    modalVisible,
+    setModalVisible,
+    modalConfig,
+    handleChange,
+    handleSubmit
+  } = useLoginForm();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -123,8 +68,8 @@ export default function LoginScreen() {
             <View style={styles.inputWrapper}>
               <TextInput
                 label="Correo Electrónico"
-                value={correo}
-                onChangeText={(val) => handleInputChange('correo', val)}
+                value={formData.correo}
+                onChangeText={(val) => handleChange('correo', val)}
                 mode="outlined"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -142,8 +87,8 @@ export default function LoginScreen() {
             <View style={styles.inputWrapper}>
               <TextInput
                 label="Contraseña"
-                value={password}
-                onChangeText={(val) => handleInputChange('password', val)}
+                value={formData.password}
+                onChangeText={(val) => handleChange('password', val)}
                 mode="outlined"
                 secureTextEntry={!showPassword}
                 error={!!errors.password}
@@ -174,7 +119,7 @@ export default function LoginScreen() {
             {/* Botón de Acción */}
             <Button
               mode="contained"
-              onPress={handleLogin}
+              onPress={handleSubmit}
               loading={isSubmitting}
               disabled={isSubmitting}
               style={styles.loginButton}
