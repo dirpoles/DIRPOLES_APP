@@ -17,21 +17,29 @@ import {
  * permitiendo que la vista se mantenga limpia y enfocada en el diseño.
  */
 export const useBeneficiarioForm = (initialState = {}) => {
+  // Procesar initialState para separar seccion si viene unificada (para edición)
+  const processedInitialState = { ...initialState };
+  if (initialState?.seccion && initialState.seccion.includes('-')) {
+    const [numero, sede] = initialState.seccion.split('-');
+    processedInitialState.seccion_numero = numero;
+    processedInitialState.seccion_sede = sede;
+  }
+
   const [formData, setFormData] = useState({
     id_pnf: '',
     seccion_numero: '',
     seccion_sede: '',
     nombres: '',
     apellidos: '',
-    tipo_cedula: 'V', // Valor por defecto
+    tipo_cedula: 'V',
     cedula: '',
     fecha_nac: new Date(),
     telefono: '',
     correo: '',
-    genero: 'M', // Valor por defecto
+    genero: 'M',
     direccion: '',
     estatus: 1,
-    ...initialState
+    ...processedInitialState
   });
 
   const [errors, setErrors] = useState({});
