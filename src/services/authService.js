@@ -74,6 +74,18 @@ const authService = {
    */
   logout: async () => {
     try {
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      
+      // Intentar avisar al backend (opcional, no bloquea el cierre local)
+      if (token) {
+        await axios.post(`${API_URL}/movil`, {
+          accion: 'logout'
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` },
+          timeout: 3000 // Timeout corto para no dejar esperando al usuario
+        }).catch(e => console.log('[AuthService] No se pudo avisar al backend del logout'));
+      }
+
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync(USER_DATA_KEY);
       return true;

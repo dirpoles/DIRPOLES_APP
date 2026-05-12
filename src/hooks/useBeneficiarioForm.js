@@ -24,6 +24,17 @@ export const useBeneficiarioForm = (initialState = {}) => {
     processedInitialState.seccion_numero = numero;
     processedInitialState.seccion_sede = sede;
   }
+  
+  // Si viene una fecha de nacimiento como string (desde la BD), convertirla a Date
+  if (processedInitialState.fecha_nac && typeof processedInitialState.fecha_nac === 'string') {
+    const parts = processedInitialState.fecha_nac.split('-');
+    if (parts.length === 3) {
+      // YYYY-MM-DD
+      processedInitialState.fecha_nac = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      processedInitialState.fecha_nac = new Date(processedInitialState.fecha_nac);
+    }
+  }
 
   const [formData, setFormData] = useState({
     id_pnf: '',

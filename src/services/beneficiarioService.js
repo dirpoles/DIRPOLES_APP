@@ -36,6 +36,38 @@ const beneficiarioService = {
                 message: error.response?.data?.mensaje || 'Error al conectar con el servidor'
             };
         }
+    },
+
+    /**
+     * Obtiene la lista de todos los beneficiarios
+     */
+    obtenerTodos: async () => {
+        try {
+            const token = await SecureStore.getItemAsync('user_token');
+            
+            // Nota: Aunque conceptualmente es un GET, usamos POST porque el backend 
+            // espera leer el campo "accion" desde el body JSON (php://input)
+            const response = await axios.post(`${API_URL}/movil`, {
+                accion: 'consultar_beneficiarios'
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            return {
+                success: response.data.estado === 'exito',
+                data: response.data.datos || [],
+                message: response.data.mensaje || ''
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.mensaje || 'Error al obtener beneficiarios',
+                data: []
+            };
+        }
     }
 };
 

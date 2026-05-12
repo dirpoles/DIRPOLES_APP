@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   FlatList,
   TouchableOpacity,
-  TextInput as RNTextInput,
+  ActivityIndicator,
 } from 'react-native';
 import {
   Text,
@@ -14,33 +14,58 @@ import {
   FAB,
   Searchbar,
   Badge,
-  useTheme
+  useTheme,
+  Menu,
+  Divider,
 } from 'react-native-paper';
 import { 
-  Search, 
-  Filter, 
-  User, 
+  Search,
+  Filter,
+  User,
   MoreVertical, 
   UserPlus, 
   ChevronRight,
   IdCard,
-  GraduationCap
+  GraduationCap,
+  Trash2,
+  Edit
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
+import { useBeneficiariosList } from '../../hooks/useBeneficiariosList';
 
-/**
- * COMPONENTE: BeneficiarioList
- * Muestra la lista de beneficiarios con tarjetas y buscador.
- */
 const BeneficiarioList = ({ onAddPress, onEditPress }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Datos de prueba (Dummy Data) para ver el diseño
-  const [beneficiarios] = useState([
-    { id: '1', nombres: 'Roberth', apellidos: 'Matos', cedula: '25123456', pnf: 'Informática', seccion: '3013-B', estatus: 1 },
-    { id: '2', nombres: 'Maria', apellidos: 'Perez', cedula: '18999888', pnf: 'Contaduría', seccion: '1101-M', estatus: 1 },
-    { id: '3', nombres: 'Juan', apellidos: 'García', cedula: '30444555', pnf: 'Sistemas', seccion: '4201-C', estatus: 0 },
-  ]);
+  const { 
+    beneficiarios, 
+    loading, 
+    error, 
+    searchQuery, 
+    handleSearch, 
+    refetch 
+  } = useBeneficiariosList();
+
+  const [menuVisible, setMenuVisible] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState(null);
+
+  const openMenu = (item) => {
+    setSelectedItem(item);
+    setMenuVisible(true);
+  };
+
+  const closeMenu = () => {
+    setMenuVisible(false);
+    setSelectedItem(null);
+  };
+
+  const handleEdit = () => {
+    onEditPress(selectedItem);
+    closeMenu();
+  };
+
+  const handleDelete = () => {
+    // Aquí implementaremos la lógica de eliminar luego
+    console.log('Eliminar:', selectedItem?.id_beneficiario);
+    closeMenu();
+  };
 
   const renderItem = ({ item }) => (
     <Card style={styles.card} onPress={() => onEditPress(item)}>
@@ -74,7 +99,7 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
           </Badge>
           <IconButton
             icon={() => <MoreVertical size={20} color={COLORS.textSecondary} />}
-            onPress={() => {}}
+            onPress={() => openMenu(item)}
           />
         </View>
       </Card.Content>
@@ -86,7 +111,7 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Buscar por cédula o nombre..."
-          onChangeText={setSearchQuery}
+          onChangeText={handleSearch}
           value={searchQuery}
           style={styles.searchBar}
           inputStyle={styles.searchInput}
@@ -97,19 +122,35 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={beneficiarios}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <User size={64} color={COLORS.border} />
-            <Text style={styles.emptyText}>No se encontraron beneficiarios</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando beneficiarios...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={refetch} style={styles.retryButton}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={beneficiarios}
+          keyExtractor={(item) => String(item.id_beneficiario || item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshing={loading}
+          onRefresh={refetch}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <User size={64} color={COLORS.border} />
+              <Text style={styles.emptyText}>No se encontraron beneficiarios</Text>
+            </View>
+          }
+        />
+      )}
 
       <FAB
         icon={() => <UserPlus color="#FFF" size={24} />}
@@ -118,6 +159,27 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
         label="Nuevo"
         color="#FFF"
       />
+
+      {/* MENU DE ACCIONES (ELIMINAR / EDITAR) */}
+      <Menu
+        visible={menuVisible}
+        onDismiss={closeMenu}
+        anchor={{ x: 1000, y: 0 }} // El anchor se ignora si usamos un componente como trigger, pero aquí lo manejamos con estado
+        contentStyle={styles.menuContent}
+      >
+        <Menu.Item 
+          onPress={handleEdit} 
+          title="Editar" 
+          leadingIcon={() => <Edit size={20} color={COLORS.primary} />}
+        />
+        <Divider />
+        <Menu.Item 
+          onPress={handleDelete} 
+          title="Eliminar" 
+          titleStyle={{ color: COLORS.danger }}
+          leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
+        />
+      </Menu>
     </View>
   );
 };
@@ -219,6 +281,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textMuted,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  errorText: {
+    color: COLORS.danger,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  menuContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    marginTop: 40, // Ajuste para que baje un poco del header si es necesario
+  }
 });
 
 export default BeneficiarioList;
