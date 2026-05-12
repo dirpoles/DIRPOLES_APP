@@ -33,47 +33,22 @@ import {
 import { COLORS } from '../../constants/config';
 import { useBeneficiariosList } from '../../hooks/useBeneficiariosList';
 
-const BeneficiarioList = ({ onAddPress, onEditPress }) => {
-  const { 
-    beneficiarios, 
-    loading, 
-    error, 
-    searchQuery, 
-    handleSearch, 
-    refetch 
-  } = useBeneficiariosList();
+/**
+ * COMPONENTE: BeneficiarioCard
+ * Representa una tarjeta individual con su propio estado para el menú.
+ */
+const BeneficiarioCard = ({ item, onEditPress }) => {
+  const [visible, setVisible] = React.useState(false);
+  const openMenu = () => setVisible(true);
+  const closeMenu = () => setVisible(false);
 
-  const [menuVisible, setMenuVisible] = React.useState(false);
-  const [selectedItem, setSelectedItem] = React.useState(null);
-
-  const openMenu = (item) => {
-    setSelectedItem(item);
-    setMenuVisible(true);
-  };
-
-  const closeMenu = () => {
-    setMenuVisible(false);
-    setSelectedItem(null);
-  };
-
-  const handleEdit = () => {
-    onEditPress(selectedItem);
-    closeMenu();
-  };
-
-  const handleDelete = () => {
-    // Aquí implementaremos la lógica de eliminar luego
-    console.log('Eliminar:', selectedItem?.id_beneficiario);
-    closeMenu();
-  };
-
-  const renderItem = ({ item }) => (
+  return (
     <Card style={styles.card} onPress={() => onEditPress(item)}>
       <Card.Content style={styles.cardContent}>
         <View style={styles.avatarContainer}>
           <Avatar.Text 
             size={48} 
-            label={`${item.nombres[0]}${item.apellidos[0]}`} 
+            label={`${item.nombres?.[0] || ''}${item.apellidos?.[0] || ''}`} 
             style={[styles.avatar, { backgroundColor: item.estatus ? COLORS.primaryLight : COLORS.border }]}
             labelStyle={{ color: item.estatus ? COLORS.primary : COLORS.textSecondary }}
           />
@@ -87,7 +62,7 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
           </View>
           <View style={styles.detailRow}>
             <GraduationCap size={14} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{item.pnf} • {item.seccion}</Text>
+            <Text style={styles.detailText}>{item.pnf || 'N/A'} • {item.seccion}</Text>
           </View>
         </View>
 
@@ -97,13 +72,49 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
           >
             {item.estatus ? 'Activo' : 'Inactivo'}
           </Badge>
-          <IconButton
-            icon={() => <MoreVertical size={20} color={COLORS.textSecondary} />}
-            onPress={() => openMenu(item)}
-          />
+          
+          <Menu
+            visible={visible}
+            onDismiss={closeMenu}
+            anchor={
+              <IconButton
+                icon={() => <MoreVertical size={20} color={COLORS.textSecondary} />}
+                onPress={openMenu}
+              />
+            }
+            contentStyle={styles.menuContent}
+          >
+            <Menu.Item 
+              onPress={() => { onEditPress(item); closeMenu(); }} 
+              title="Editar" 
+              leadingIcon={() => <Edit size={20} color={COLORS.primary} />}
+            />
+            <Divider />
+            <Menu.Item 
+              onPress={() => { console.log('Eliminar:', item.id_beneficiario); closeMenu(); }} 
+              title="Eliminar" 
+              titleStyle={{ color: COLORS.danger }}
+              leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
+            />
+          </Menu>
         </View>
       </Card.Content>
     </Card>
+  );
+};
+
+const BeneficiarioList = ({ onAddPress, onEditPress }) => {
+  const { 
+    beneficiarios, 
+    loading, 
+    error, 
+    searchQuery, 
+    handleSearch, 
+    refetch 
+  } = useBeneficiariosList();
+
+  const renderItem = ({ item }) => (
+    <BeneficiarioCard item={item} onEditPress={onEditPress} />
   );
 
   return (
@@ -159,27 +170,6 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
         label="Nuevo"
         color="#FFF"
       />
-
-      {/* MENU DE ACCIONES (ELIMINAR / EDITAR) */}
-      <Menu
-        visible={menuVisible}
-        onDismiss={closeMenu}
-        anchor={{ x: 1000, y: 0 }} // El anchor se ignora si usamos un componente como trigger, pero aquí lo manejamos con estado
-        contentStyle={styles.menuContent}
-      >
-        <Menu.Item 
-          onPress={handleEdit} 
-          title="Editar" 
-          leadingIcon={() => <Edit size={20} color={COLORS.primary} />}
-        />
-        <Divider />
-        <Menu.Item 
-          onPress={handleDelete} 
-          title="Eliminar" 
-          titleStyle={{ color: COLORS.danger }}
-          leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
-        />
-      </Menu>
     </View>
   );
 };
