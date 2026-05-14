@@ -38,7 +38,7 @@ export default function HomeScreen() {
 
         {/* Sección de Bienvenida */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>¡Hola, {user?.nombre || 'Usuario'}!</Text>
+          <Text style={styles.greeting}>¡Hola, {user?.nombre + ' ' + user?.apellido || 'Usuario'}!</Text>
           <Text style={styles.roleText}>{user?.tipo_empleado || 'Personal'}</Text>
           <Text style={styles.subtitle}>Panel de Control - Citas Psicológicas</Text>
         </View>

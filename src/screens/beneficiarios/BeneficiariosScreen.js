@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform, 
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   TouchableOpacity,
   Animated
@@ -64,16 +64,16 @@ export default function BeneficiariosScreen() {
           </View>
         ) : (
           <View style={styles.headerSection}>
-            <Text style={styles.title}>Beneficiarios</Text>
-            <Text style={styles.subtitle}>Gestión y consulta de registros</Text>
+            <Text style={styles.title}>Módulo de Beneficiarios</Text>
+            <Text style={styles.subtitle}>Gestión, consulta y registro de beneficiarios</Text>
           </View>
         )}
       </View>
 
       {view === 'list' ? (
-        <BeneficiarioList 
-          onAddPress={handleAddPress} 
-          onEditPress={handleEditPress} 
+        <BeneficiarioList
+          onAddPress={handleAddPress}
+          onEditPress={handleEditPress}
         />
       ) : (
         <KeyboardAvoidingView
@@ -84,9 +84,9 @@ export default function BeneficiariosScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <BeneficiarioForm 
-              initialData={selectedBeneficiario} 
-              onSubmit={handleFormSubmit} 
+            <BeneficiarioForm
+              initialData={selectedBeneficiario}
+              onSubmit={handleFormSubmit}
             />
             <View style={{ height: 40 }} />
           </ScrollView>
