@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import beneficiarioService from '../services/beneficiarioService';
 import { 
   isRequired, 
   isValidPhone, 
@@ -36,6 +37,12 @@ export const useBeneficiarioForm = (initialState = {}) => {
     }
   }
 
+  // Normalizar Género (de 'Masculino' a 'M', etc.)
+  if (processedInitialState.genero) {
+    if (processedInitialState.genero === 'Masculino') processedInitialState.genero = 'M';
+    if (processedInitialState.genero === 'Femenino') processedInitialState.genero = 'F';
+  }
+
   const [formData, setFormData] = useState({
     id_pnf: '',
     seccion_numero: '',
@@ -59,6 +66,51 @@ export const useBeneficiarioForm = (initialState = {}) => {
   // Estados para el Modal (Feedback)
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', type: 'info' });
+
+  // EFECTOS PARA VALIDACIÓN EN TIEMPO REAL CONTRA EL BACKEND (Duplicados)
+  
+  // 1. Validar Cédula
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.cedula && isValidCedula(formData.cedula)) {
+        checkRemoteDuplication('cedula', formData.cedula);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [formData.cedula]);
+
+  // 2. Validar Correo
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.correo && isValidEmail(formData.correo)) {
+        checkRemoteDuplication('correo', formData.correo);
+      }
+    }, 1000); // Un poco más de tiempo para el correo
+    return () => clearTimeout(timer);
+  }, [formData.correo]);
+
+  // 3. Validar Teléfono
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const cleanPhone = formData.telefono.replace(/\D/g, '');
+      if (cleanPhone.length >= 10 && isValidPhone(formData.telefono)) {
+        checkRemoteDuplication('telefono', formData.telefono);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [formData.telefono]);
+
+  const checkRemoteDuplication = async (campo, valor) => {
+    const result = await beneficiarioService.validarDuplicado(
+      campo, 
+      valor, 
+      initialState?.id_beneficiario || null
+    );
+    
+    if (result.existe) {
+      setErrors(prev => ({ ...prev, [campo]: result.message }));
+    }
+  };
 
   /**
    * Da formato visual al número de teléfono (ej: 0414-1234567)
@@ -190,15 +242,18 @@ export const useBeneficiarioForm = (initialState = {}) => {
     
     if (result.success) {
       setModalConfig({
-        title: '¡Éxito!',
+        title: '¡Operación Exitosa!',
         message: result.message,
         type: 'success'
       });
-      resetForm();
+      // Solo resetear si es un registro nuevo (no tiene ID)
+      if (!dataToSend.id_beneficiario) {
+        resetForm();
+      }
     } else {
       setModalConfig({
-        title: 'Error de Registro',
-        message: result.message,
+        title: 'Atención',
+        message: result.message || 'No se pudo completar la operación',
         type: 'error'
       });
     }

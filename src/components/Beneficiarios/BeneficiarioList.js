@@ -17,10 +17,12 @@ import {
   useTheme,
   Menu,
   Divider,
+  Portal,
+  Dialog,
+  Button
 } from 'react-native-paper';
 import { 
   Search,
-  Filter,
   User,
   MoreVertical, 
   UserPlus, 
@@ -28,16 +30,18 @@ import {
   IdCard,
   GraduationCap,
   Trash2,
-  Edit
+  Edit,
+  AlertTriangle
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 import { useBeneficiariosList } from '../../hooks/useBeneficiariosList';
+import beneficiarioService from '../../services/beneficiarioService';
 
 /**
  * COMPONENTE: BeneficiarioCard
  * Representa una tarjeta individual con su propio estado para el menú.
  */
-const BeneficiarioCard = ({ item, onEditPress }) => {
+const BeneficiarioCard = ({ item, onEditPress, onDeletePress }) => {
   const [visible, setVisible] = React.useState(false);
   const openMenu = () => setVisible(true);
   const closeMenu = () => setVisible(false);
@@ -62,7 +66,7 @@ const BeneficiarioCard = ({ item, onEditPress }) => {
           </View>
           <View style={styles.detailRow}>
             <GraduationCap size={14} color={COLORS.textSecondary} />
-            <Text style={styles.detailText}>{item.pnf || 'N/A'} • {item.seccion}</Text>
+            <Text style={styles.detailText}>{item.nombre_pnf || 'N/A'} • {item.seccion}</Text>
           </View>
         </View>
 
@@ -91,7 +95,7 @@ const BeneficiarioCard = ({ item, onEditPress }) => {
             />
             <Divider />
             <Menu.Item 
-              onPress={() => { console.log('Eliminar:', item.id_beneficiario); closeMenu(); }} 
+              onPress={() => { onDeletePress(item); closeMenu(); }} 
               title="Eliminar" 
               titleStyle={{ color: COLORS.danger }}
               leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
@@ -113,8 +117,47 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
     refetch 
   } = useBeneficiariosList();
 
+  // Estados para el diálogo de confirmación de eliminación
+  const [deleteDialogVisible, setDeleteDialogVisible] = React.useState(false);
+  const [itemToDelete, setItemToDelete] = React.useState(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const showDeleteDialog = (item) => {
+    setItemToDelete(item);
+    setDeleteDialogVisible(true);
+  };
+
+  const hideDeleteDialog = () => {
+    setDeleteDialogVisible(false);
+    setItemToDelete(null);
+    setIsDeleting(false); // Asegurar que el spinner se apague al cerrar
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await beneficiarioService.desactivar(itemToDelete.id_beneficiario);
+      if (result.success) {
+        hideDeleteDialog();
+        refetch(); // Recargar la lista
+      } else {
+        alert(result.message || 'No se pudo desactivar el beneficiario');
+      }
+    } catch (error) {
+      alert('Error de conexión al desactivar');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const renderItem = ({ item }) => (
-    <BeneficiarioCard item={item} onEditPress={onEditPress} />
+    <BeneficiarioCard 
+      item={item} 
+      onEditPress={onEditPress} 
+      onDeletePress={showDeleteDialog}
+    />
   );
 
   return (
@@ -128,9 +171,6 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
           inputStyle={styles.searchInput}
           iconColor={COLORS.primary}
         />
-        <TouchableOpacity style={styles.filterBtn}>
-          <Filter size={20} color={COLORS.primary} />
-        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -170,6 +210,38 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
         label="Nuevo"
         color="#FFF"
       />
+
+      {/* DIALOGO DE CONFIRMACIÓN DE ELIMINACIÓN (BORRADO LÓGICO) */}
+      <Portal>
+        <Dialog visible={deleteDialogVisible} onDismiss={hideDeleteDialog} style={styles.dialog}>
+          <Dialog.Title style={styles.dialogTitle}>
+            <View style={styles.titleRow}>
+              <AlertTriangle color={COLORS.danger} size={24} />
+              <Text style={styles.titleText}>Confirmar Desactivación</Text>
+            </View>
+          </Dialog.Title>
+          <Dialog.Content>
+            <Text style={styles.dialogContent}>
+              ¿Está seguro que desea desactivar a <Text style={{fontWeight: '700'}}>{itemToDelete?.nombre_completo || itemToDelete?.nombres}</Text>?
+            </Text>
+            <Text style={styles.dialogSubContent}>
+              El registro permanecerá en el sistema pero figurará como "Inactivo".
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={hideDeleteDialog} labelStyle={{color: COLORS.textSecondary}}>Cancelar</Button>
+            <Button 
+              onPress={confirmDelete} 
+              loading={isDeleting}
+              disabled={isDeleting}
+              mode="contained"
+              style={{backgroundColor: COLORS.danger}}
+            >
+              Desactivar
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 };
@@ -194,14 +266,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     fontSize: 14,
-  },
-  filterBtn: {
-    width: 48,
-    height: 48,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   listContent: {
     padding: 16,
@@ -301,7 +365,36 @@ const styles = StyleSheet.create({
   menuContent: {
     backgroundColor: COLORS.surface,
     borderRadius: 12,
-    marginTop: 40, // Ajuste para que baje un poco del header si es necesario
+    marginTop: 40,
+  },
+  dialog: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+  },
+  dialogTitle: {
+    paddingBottom: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  titleText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  dialogContent: {
+    fontSize: 16,
+    color: COLORS.text,
+    lineHeight: 22,
+    marginTop: 10,
+  },
+  dialogSubContent: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 12,
+    fontStyle: 'italic',
   }
 });
 

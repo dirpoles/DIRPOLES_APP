@@ -68,6 +68,82 @@ const beneficiarioService = {
                 data: []
             };
         }
+    },
+
+    /**
+     * Actualiza los datos de un beneficiario existente
+     */
+    actualizar: async (datos) => {
+        try {
+            const token = await SecureStore.getItemAsync('user_token');
+            
+            const response = await axios.post(`${API_URL}/movil`, {
+                accion: 'actualizar_beneficiario',
+                ...datos
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            return {
+                success: response.data.estado === 'exito',
+                message: response.data.mensaje || 'El servidor no envió un mensaje.',
+                data: response.data
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.mensaje || 'Error al conectar con el servidor'
+            };
+        }
+    },
+
+    /**
+     * Desactiva un beneficiario (Borrado lógico)
+     */
+    desactivar: async (id_beneficiario) => {
+        try {
+            const token = await SecureStore.getItemAsync('user_token');
+            const response = await axios.post(`${API_URL}/movil`, {
+                accion: 'desactivar_beneficiario',
+                id_beneficiario
+            }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            return {
+                success: response.data.estado === 'exito',
+                message: response.data.mensaje
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.mensaje || 'Error al desactivar beneficiario'
+            };
+        }
+    },
+
+    validarDuplicado: async (campo, valor, idExcluir = null) => {
+        try {
+            const token = await SecureStore.getItemAsync('user_token');
+            const response = await axios.post(`${API_URL}/movil`, {
+                accion: 'validar_duplicado',
+                campo,
+                valor,
+                id_excluir: idExcluir
+            }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            return {
+                success: response.data.estado === 'exito',
+                existe: response.data.existe,
+                message: response.data.mensaje
+            };
+        } catch (error) {
+            return { success: false, existe: false };
+        }
     }
 };
 

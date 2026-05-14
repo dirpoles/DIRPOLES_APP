@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { TextInput, Button, Text, Card, SegmentedButtons, Menu, Divider } from 'react-native-paper';
-import { User, Mail, Phone, MapPin, GraduationCap, Calendar, ChevronRight, Save, Search } from 'lucide-react-native';
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  GraduationCap, 
+  Calendar, 
+  ChevronRight, 
+  Save, 
+  Search,
+  Activity
+} from 'lucide-react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { COLORS } from '../../constants/config';
 import { useBeneficiarioForm } from '../../hooks/useBeneficiarioForm';
@@ -70,7 +81,15 @@ const BeneficiarioForm = ({ initialData = null, onSubmit = null }) => {
   const handleSave = () => {
     // Llamamos al handleSubmit del hook, pasando la función del servicio
     handleSubmit(async (data) => {
-      const result = await beneficiarioService.registrar(data);
+      console.log('[BeneficiarioForm] Enviando datos:', JSON.stringify(data, null, 2));
+      
+      let result;
+      if (data.id_beneficiario) {
+        result = await beneficiarioService.actualizar(data);
+      } else {
+        result = await beneficiarioService.registrar(data);
+      }
+      
       if (result.success && onSubmit) {
         onSubmit(result.data);
       }
@@ -80,6 +99,43 @@ const BeneficiarioForm = ({ initialData = null, onSubmit = null }) => {
 
   return (
     <View style={styles.container}>
+      {/* GRUPO 4: Estado (Muy importante para reactivar) */}
+      <Card style={styles.card}>
+        <Card.Title
+          title="Estado del Registro"
+          left={(props) => <Activity {...props} color={COLORS.primary} size={24} />}
+          titleStyle={styles.cardTitle}
+        />
+        <Card.Content>
+          <Text style={styles.label}>Estatus del Beneficiario</Text>
+          <SegmentedButtons
+            value={String(formData.estatus)}
+            onValueChange={val => handleChange('estatus', parseInt(val))}
+            buttons={[
+              { 
+                value: '1', 
+                label: 'Activo',
+                checkedColor: COLORS.success,
+              },
+              { 
+                value: '0', 
+                label: 'Inactivo',
+                checkedColor: COLORS.danger,
+              },
+            ]}
+            style={styles.segmentedLarge}
+          />
+          <Text style={[
+            styles.helperText, 
+            { color: formData.estatus === 1 ? COLORS.success : COLORS.danger }
+          ]}>
+            {formData.estatus === 1 
+              ? '● ACTIVO: El beneficiario puede recibir servicios.' 
+              : '● INACTIVO: El beneficiario no aparecerá en búsquedas estándar.'}
+          </Text>
+        </Card.Content>
+      </Card>
+
       {/* GRUPO 1: Información Personal */}
       <Card style={styles.card}>
         <Card.Title
@@ -432,6 +488,12 @@ const styles = StyleSheet.create({
   selectorText: {
     fontSize: 14,
     color: COLORS.text,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
 });
 
