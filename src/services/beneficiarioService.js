@@ -16,6 +16,7 @@ const beneficiarioService = {
             const token = await SecureStore.getItemAsync('user_token');
             
             const response = await axios.post(`${API_URL}/movil`, {
+                modulo: 'beneficiarios',
                 accion: 'registrar_beneficiario',
                 ...datos
             }, {
@@ -48,6 +49,7 @@ const beneficiarioService = {
             // Nota: Aunque conceptualmente es un GET, usamos POST porque el backend 
             // espera leer el campo "accion" desde el body JSON (php://input)
             const response = await axios.post(`${API_URL}/movil`, {
+                modulo: 'beneficiarios',
                 accion: 'consultar_beneficiarios'
             }, {
                 headers: {
@@ -78,6 +80,7 @@ const beneficiarioService = {
             const token = await SecureStore.getItemAsync('user_token');
             
             const response = await axios.post(`${API_URL}/movil`, {
+                modulo: 'beneficiarios',
                 accion: 'actualizar_beneficiario',
                 ...datos
             }, {
@@ -107,6 +110,7 @@ const beneficiarioService = {
         try {
             const token = await SecureStore.getItemAsync('user_token');
             const response = await axios.post(`${API_URL}/movil`, {
+                modulo: 'beneficiarios',
                 accion: 'desactivar_beneficiario',
                 id_beneficiario
             }, {
@@ -128,6 +132,7 @@ const beneficiarioService = {
         try {
             const token = await SecureStore.getItemAsync('user_token');
             const response = await axios.post(`${API_URL}/movil`, {
+                modulo: 'beneficiarios',
                 accion: 'validar_duplicado',
                 campo,
                 valor,

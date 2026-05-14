@@ -15,6 +15,7 @@ const dataService = {
     try {
       const token = await SecureStore.getItemAsync('user_token');
       const response = await axios.post(`${API_URL}/movil`, {
+        modulo: 'beneficiarios',
         accion: 'obtener_pnf'
       }, {
         headers: {

@@ -23,6 +23,7 @@ const authService = {
       // Petición centralizada al controlador móvil
       // Enviamos el campo 'accion' para que el switch del backend lo identifique
       const response = await axios.post(`${API_URL}/movil`, {
+        modulo: 'general',
         accion: 'login',
         correo,
         password
@@ -79,6 +80,7 @@ const authService = {
       // Intentar avisar al backend (opcional, no bloquea el cierre local)
       if (token) {
         await axios.post(`${API_URL}/movil`, {
+          modulo: 'general',
           accion: 'logout'
         }, {
           headers: { 'Authorization': `Bearer ${token}` },
@@ -106,6 +108,7 @@ const authService = {
 
       // Opcional: Validar el token con la acción 'me' del movilController
       const response = await axios.post(`${API_URL}/movil`, {
+        modulo: 'general',
         accion: 'me'
       }, {
         headers: {
