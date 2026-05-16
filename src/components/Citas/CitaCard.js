@@ -1,21 +1,24 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text, Card, Avatar, IconButton, Badge, Menu, Divider } from 'react-native-paper';
+import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { Text, Card, Avatar, IconButton, Menu, Divider } from 'react-native-paper';
 import { 
     MoreVertical, 
     Calendar, 
     Clock, 
     User, 
     Edit, 
-    Trash2 
+    Info 
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 
 /**
  * COMPONENTE: CitaCard
  * Molde visual para una cita individual.
+ * - Click en el card abre editar.
+ * - Badge dinámico según nombre_estado.
+ * - Botón eliminar reemplazado por informativo.
  */
-const CitaCard = ({ item, onEditPress, onDeletePress }) => {
+const CitaCard = ({ item, onEditPress, onInfoPress }) => {
     const [visible, setVisible] = React.useState(false);
     const openMenu = () => setVisible(true);
     const closeMenu = () => setVisible(false);
@@ -25,68 +28,90 @@ const CitaCard = ({ item, onEditPress, onDeletePress }) => {
         return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
     };
 
+    // Colores dinámicos según el estado de la cita
+    const getStatusTheme = (nombre_estado) => {
+        switch (nombre_estado?.toLowerCase()) {
+            case 'pendiente':
+                return { bg: '#FEF3C7', color: '#92400E' };
+            case 'confirmada':
+                return { bg: '#DBEAFE', color: '#1E40AF' };
+            case 'atendida':
+                return { bg: '#DEF7EC', color: '#03543F' };
+            case 'cancelada':
+                return { bg: '#FDE8E8', color: '#9B1C1C' };
+            case 'no asistió':
+                return { bg: '#F3E8FF', color: '#6B21A8' };
+            default:
+                return { bg: COLORS.border, color: COLORS.textSecondary };
+        }
+    };
+
+    const statusTheme = getStatusTheme(item.nombre_estado);
+
     return (
-        <Card style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-                <View style={styles.avatarContainer}>
-                    <Avatar.Text
-                        size={48}
-                        label={getInitials(item.beneficiario)}
-                        style={[styles.avatar, { backgroundColor: item.estatus ? COLORS.primaryLight : COLORS.border }]}
-                        labelStyle={{ color: item.estatus ? COLORS.primary : COLORS.textSecondary }}
-                    />
-                </View>
-
-                <View style={styles.infoContainer}>
-                    <Text style={styles.name}>{item.beneficiario}</Text>
-                    
-                    <View style={styles.detailRow}>
-                        <User size={14} color={COLORS.textSecondary} />
-                        <Text style={styles.detailText}>Psic. {item.empleado}</Text>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => onEditPress(item)}>
+            <Card style={styles.card}>
+                <Card.Content style={styles.cardContent}>
+                    <View style={styles.avatarContainer}>
+                        <Avatar.Text
+                            size={48}
+                            label={getInitials(item.beneficiario)}
+                            style={[styles.avatar, { backgroundColor: statusTheme.bg }]}
+                            labelStyle={{ color: statusTheme.color }}
+                        />
                     </View>
 
-                    <View style={styles.detailRow}>
-                        <Calendar size={14} color={COLORS.primary} />
-                        <Text style={styles.detailText}>{item.fecha_formateada}</Text>
-                        <Clock size={14} color={COLORS.primary} style={{ marginLeft: 8 }} />
-                        <Text style={styles.detailText}>{item.hora_formateada}</Text>
+                    <View style={styles.infoContainer}>
+                        <Text style={styles.name}>{item.beneficiario}</Text>
+                        
+                        <View style={styles.detailRow}>
+                            <User size={14} color={COLORS.textSecondary} />
+                            <Text style={styles.detailText}>Psic. {item.empleado}</Text>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                            <Calendar size={14} color={COLORS.primary} />
+                            <Text style={styles.detailText}>{item.fecha_formateada}</Text>
+                            <Clock size={14} color={COLORS.primary} style={{ marginLeft: 8 }} />
+                            <Text style={styles.detailText}>{item.hora_formateada}</Text>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.actionContainer}>
-                    <Badge
-                        style={[styles.badge, { backgroundColor: item.estatus ? '#DEF7EC' : '#FDE8E8', color: item.estatus ? '#03543F' : '#9B1C1C' }]}
-                    >
-                        {item.estatus ? 'Programada' : 'Cancelada'}
-                    </Badge>
+                    <View style={styles.actionContainer}>
+                        <View style={[styles.badge, { backgroundColor: statusTheme.bg }]}>
+                            <Text style={[styles.badgeText, { color: statusTheme.color }]}>
+                                {item.nombre_estado || 'Sin estado'}
+                            </Text>
+                        </View>
 
-                    <Menu
-                        visible={visible}
-                        onDismiss={closeMenu}
-                        anchor={
-                            <IconButton
-                                icon={() => <MoreVertical size={20} color={COLORS.textSecondary} />}
-                                onPress={openMenu}
+                        <Menu
+                            visible={visible}
+                            onDismiss={closeMenu}
+                            anchor={
+                                <IconButton
+                                    icon={() => <MoreVertical size={20} color={COLORS.textSecondary} />}
+                                    onPress={openMenu}
+                                />
+                            }
+                            contentStyle={styles.menuContent}
+                        >
+                            <Menu.Item
+                                onPress={() => { onEditPress(item); closeMenu(); }}
+                                title="Editar"
+                                leadingIcon={() => <Edit size={20} color={COLORS.primary} />}
                             />
-                        }
-                        contentStyle={styles.menuContent}
-                    >
-                        <Menu.Item
-                            onPress={() => { onEditPress(item); closeMenu(); }}
-                            title="Editar"
-                            leadingIcon={() => <Edit size={20} color={COLORS.primary} />}
-                        />
-                        <Divider />
-                        <Menu.Item
-                            onPress={() => { onDeletePress(item); closeMenu(); }}
-                            title="Eliminar"
-                            titleStyle={{ color: COLORS.danger }}
-                            leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
-                        />
-                    </Menu>
-                </View>
-            </Card.Content>
-        </Card>
+                            <Divider />
+                            <Menu.Item
+                                onPress={() => { onInfoPress(item); closeMenu(); }}
+                                title="Información"
+                                titleStyle={{ color: COLORS.textSecondary }}
+                                leadingIcon={() => <Info size={20} color={COLORS.textSecondary} />}
+                            />
+                        </Menu>
+                    </View>
+                </Card.Content>
+            </Card>
+        </TouchableOpacity>
     );
 };
 
@@ -134,8 +159,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     badge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
         marginBottom: 4,
-        fontSize: 10,
+    },
+    badgeText: {
+        fontSize: 11,
         fontWeight: '700',
     },
     menuContent: {

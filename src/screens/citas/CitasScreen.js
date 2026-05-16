@@ -9,14 +9,19 @@ import {
   KeyboardAvoidingView,
   ScrollView 
 } from 'react-native';
-import { Button } from 'react-native-paper'; // IMPORTADO
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 import CitaList from '../../components/Citas/CitaList';
+import CitaForm from '../../components/Citas/CitaForm';
+import CustomModal from '../../components/UI/CustomModal';
 
 export default function CitasScreen({ navigation }) {
   const [view, setView] = useState('list');
   const [selectedCita, setSelectedCita] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalType, setModalType] = useState('success');
 
   const handleAddPress = () => {
     setSelectedCita(null);
@@ -31,6 +36,26 @@ export default function CitasScreen({ navigation }) {
   const handleBackPress = () => {
     setView('list');
     setSelectedCita(null);
+  };
+
+  const handleFormSubmit = (result) => {
+    if (result.success) {
+      setModalType('success');
+      setModalTitle(selectedCita ? '¡Cita Actualizada!' : '¡Cita Programada!');
+      setModalMessage(result.message || 'La operación se realizó exitosamente.');
+    } else {
+      setModalType('error');
+      setModalTitle('Error');
+      setModalMessage(result.message || 'No se pudo procesar la cita.');
+    }
+    setModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    if (modalType === 'success') {
+      setView('list');
+    }
   };
 
   return (
@@ -71,19 +96,22 @@ export default function CitasScreen({ navigation }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.placeholderForm}>
-                <Text style={styles.placeholderText}>El formulario de citas se cargará aquí</Text>
-                <Button 
-                  mode="contained" 
-                  onPress={handleBackPress} 
-                  style={{marginTop: 20, backgroundColor: COLORS.primary}}
-                >
-                    Volver a la lista
-                </Button>
-            </View>
+            <CitaForm 
+              initialData={selectedCita}
+              onSubmit={handleFormSubmit}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+
+      {/* MODAL PERSONALIZADO */}
+      <CustomModal
+        visible={modalVisible}
+        onClose={handleModalClose}
+        title={modalTitle}
+        message={modalMessage}
+        type={modalType}
+      />
     </SafeAreaView>
   );
 }
@@ -132,17 +160,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-  },
-  placeholderForm: {
-    flex: 1,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 50
-  },
-  placeholderText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    textAlign: 'center'
   }
 });

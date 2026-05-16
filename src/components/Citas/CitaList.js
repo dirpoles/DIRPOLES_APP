@@ -8,27 +8,21 @@ import {
 } from 'react-native';
 import {
   Text,
-  IconButton,
   FAB,
   Searchbar,
-  Portal,
-  Dialog,
-  Button
 } from 'react-native-paper';
 import { 
   ClipboardList, 
-  UserPlus, 
-  AlertTriangle,
   CalendarPlus
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 import { useCitasList } from '../../hooks/useCitasList';
-import citaService from '../../services/citaService';
 import CitaCard from './CitaCard';
+import CustomModal from '../UI/CustomModal';
 
 /**
  * COMPONENTE: CitaList
- * Contenedor principal que maneja la lista de citas, búsqueda y confirmación de eliminación.
+ * Contenedor principal que maneja la lista de citas, búsqueda y modal informativo.
  */
 const CitaList = ({ onAddPress, onEditPress }) => {
   const { 
@@ -40,46 +34,18 @@ const CitaList = ({ onAddPress, onEditPress }) => {
     refetch 
   } = useCitasList();
 
-  // Estados para el diálogo de confirmación de eliminación
-  const [deleteDialogVisible, setDeleteDialogVisible] = React.useState(false);
-  const [itemToDelete, setItemToDelete] = React.useState(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
+  // Estado para el modal informativo (reemplazo del eliminar)
+  const [infoModalVisible, setInfoModalVisible] = React.useState(false);
 
-  const showDeleteDialog = (item) => {
-    setItemToDelete(item);
-    setDeleteDialogVisible(true);
-  };
-
-  const hideDeleteDialog = () => {
-    setDeleteDialogVisible(false);
-    setItemToDelete(null);
-    setIsDeleting(false);
-  };
-
-  const confirmDelete = async () => {
-    if (!itemToDelete) return;
-    
-    setIsDeleting(true);
-    try {
-      const result = await citaService.desactivar(itemToDelete.id_cita);
-      if (result.success) {
-        hideDeleteDialog();
-        refetch();
-      } else {
-        alert(result.message || 'No se pudo cancelar la cita');
-      }
-    } catch (error) {
-      alert('Error de conexión al eliminar');
-    } finally {
-      setIsDeleting(false);
-    }
+  const showInfoModal = () => {
+    setInfoModalVisible(true);
   };
 
   const renderItem = ({ item }) => (
     <CitaCard 
       item={item} 
       onEditPress={onEditPress} 
-      onDeletePress={showDeleteDialog}
+      onInfoPress={showInfoModal}
     />
   );
 
@@ -134,37 +100,15 @@ const CitaList = ({ onAddPress, onEditPress }) => {
         color="#FFF"
       />
 
-      {/* DIALOGO DE CONFIRMACIÓN DE ELIMINACIÓN */}
-      <Portal>
-        <Dialog visible={deleteDialogVisible} onDismiss={hideDeleteDialog} style={styles.dialog}>
-          <Dialog.Title style={styles.dialogTitle}>
-            <View style={styles.titleRow}>
-              <AlertTriangle color={COLORS.danger} size={24} />
-              <Text style={styles.titleText}>Cancelar Cita</Text>
-            </View>
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text style={styles.dialogContent}>
-              ¿Está seguro que desea cancelar la cita de <Text style={{fontWeight: '700'}}>{itemToDelete?.beneficiario}</Text>?
-            </Text>
-            <Text style={styles.dialogSubContent}>
-              Esta acción no se puede deshacer desde la App.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={hideDeleteDialog} labelStyle={{color: COLORS.textSecondary}}>Cerrar</Button>
-            <Button 
-              onPress={confirmDelete} 
-              loading={isDeleting}
-              disabled={isDeleting}
-              mode="contained"
-              style={{backgroundColor: COLORS.danger}}
-            >
-              Cancelar Cita
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {/* MODAL INFORMATIVO */}
+      <CustomModal
+        visible={infoModalVisible}
+        onClose={() => setInfoModalVisible(false)}
+        title="Información"
+        message="Para eliminar o cancelar una cita, por favor acceda al sistema web desde un computador."
+        type="info"
+        buttonText="Entendido"
+      />
     </View>
   );
 };
@@ -239,35 +183,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
-  dialog: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-  },
-  dialogTitle: {
-    paddingBottom: 0,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  dialogContent: {
-    fontSize: 16,
-    color: COLORS.text,
-    lineHeight: 22,
-    marginTop: 10,
-  },
-  dialogSubContent: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 12,
-    fontStyle: 'italic',
-  }
 });
 
 export default CitaList;
