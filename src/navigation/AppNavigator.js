@@ -8,6 +8,7 @@ import { COLORS } from '../constants/config';
 // Pantallas
 import LoginScreen from '../screens/auth/LoginScreen';
 import TabNavigator from './TabNavigator';
+import PerfilScreen from '../screens/perfil/PerfilScreen';
 
 const Stack = createStackNavigator();
 
@@ -31,7 +32,10 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           // Flujo de Aplicación (Dashboard con Tabs)
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen name="Perfil" component={PerfilScreen} />
+          </>
         ) : (
           // Flujo de Autenticación
           <Stack.Screen name="Login" component={LoginScreen} />

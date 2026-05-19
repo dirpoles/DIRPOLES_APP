@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import authService from '../services/authService';
 
 /**
@@ -60,13 +61,31 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   };
 
+  /**
+   * Actualiza los datos del usuario en memoria y almacenamiento local (Memoizado estáticamente)
+   */
+  const updateUser = useCallback(async (updatedData) => {
+    try {
+      setUser(prevUser => {
+        const newUser = { ...prevUser, ...updatedData };
+        SecureStore.setItemAsync('user_data', JSON.stringify(newUser)).catch(err => {
+          console.error('[AuthContext] Error guardando en SecureStore:', err);
+        });
+        return newUser;
+      });
+    } catch (e) {
+      console.error('[AuthContext] Error actualizando datos locales:', e);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       isLoading, 
       isAuthenticated, 
       login, 
-      logout 
+      logout,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

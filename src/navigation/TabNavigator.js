@@ -44,7 +44,7 @@ export default function TabNavigator() {
           headerRight: () => (
             <View style={styles.headerRight}>
               <TouchableOpacity 
-                onPress={() => {/* Lógica de perfil */}}
+                onPress={() => navigation.navigate('Perfil')}
                 style={styles.headerButton}
               >
                 <User size={22} color={COLORS.primary} />
