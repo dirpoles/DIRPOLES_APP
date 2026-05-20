@@ -111,10 +111,6 @@ export default function LoginScreen() {
               {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
             </View>
 
-            {/* Olvidé mi contraseña */}
-            <View style={styles.forgotContainer}>
-              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-            </View>
 
             {/* Botón de Acción */}
             <Button
