@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../constants/config';
+import { encryptRSA } from '../utils/rsaEncrypt';
 
 /**
  * SERVICIO DE AUTENTICACIÓN (SOLID: Responsabilidad Única)
@@ -20,13 +21,16 @@ const authService = {
    */
   login: async (correo, password) => {
     try {
+      // Cifrar la contraseña con RSA antes de enviarla al backend
+      const encryptedPassword = encryptRSA(password);
+      
       // Petición centralizada al controlador móvil
       // Enviamos el campo 'accion' para que el switch del backend lo identifique
       const response = await axios.post(`${API_URL}/movil`, {
         modulo: 'general',
         accion: 'login',
         correo,
-        password
+        password: encryptedPassword
       }, {
         timeout: 10000,
         headers: {

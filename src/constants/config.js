@@ -5,8 +5,8 @@
 // IMPORTANTE: Cambia esta URL por la IP de tu computadora en la red local
 // Ejemplo: 'http://192.168.1.100/DIRPOLES_4/api'
 // Para pruebas locales con Expo Go en el mismo PC, usa la IP local
-export const API_URL = 'http://192.168.1.108/DIRPOLES_4/api';
-export const BASE_URL = 'http://192.168.1.108/DIRPOLES_4';
+export const API_URL = 'http://192.168.1.103/DIRPOLES_4/api';
+export const BASE_URL = 'http://192.168.1.103/DIRPOLES_4';
 
 // ============================================
 // PALETA DE COLORES
