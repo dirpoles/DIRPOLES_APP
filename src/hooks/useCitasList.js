@@ -19,8 +19,20 @@ export const useCitasList = () => {
         const result = await citaService.consultar_citas();
 
         if (result.success) {
-            // Según tu JSON, las citas vienen en result.data.data
-            const listaCitas = Array.isArray(result.data.data) ? result.data.data : [];
+            const rawLista = Array.isArray(result.data.data) ? result.data.data : [];
+            const listaCitas = rawLista.map(c => {
+                const nombreBeneficiario = c.beneficiario 
+                    || (c.beneficiario_nombres ? `${c.beneficiario_nombres} ${c.beneficiario_apellidos || ''}`.trim() : 'Paciente Desconocido');
+                const nombrePsicologo = c.psicologo || c.empleado || 'Psicólogo';
+                return {
+                    ...c,
+                    beneficiario: nombreBeneficiario,
+                    empleado: nombrePsicologo,
+                    psicologo: nombrePsicologo,
+                    cedula: c.cedula_beneficiario || c.cedula || ''
+                };
+            });
+
             setCitas(listaCitas);
             setFilteredCitas(listaCitas);
         } else {

@@ -1,74 +1,88 @@
-import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
+import api from './api';
 
 /**
- * SERVICIO: Perfil
- * Centraliza las peticiones API relacionadas con el perfil del usuario.
+ * SERVICIO: Perfil de Empleado (SOLID: SRP)
+ *
+ * Centraliza las peticiones HTTP del módulo de perfil de usuario
+ * contra la API REST de DIRPOLES-4.
+ *
+ * Contrato de salida (consumido por usePerfil):
+ *   { success: boolean, data: object|null, message: string }
  */
+
 const perfilService = {
+  /**
+   * Obtiene los datos de perfil del empleado autenticado.
+   *
+   * Consumido por: usePerfil → perfilService.consultar()
+   *
+   * @returns {Promise<{success: boolean, data: object|null, message: string}>}
+   */
+  consultar: async () => {
+    try {
+      const response = await api.get('/perfil/obtener');
+      const data     = response.data;
 
-    /**
-     * Consulta los datos de perfil del empleado logueado
-     */
-    consultar: async () => {
-        try {
-            const token = await SecureStore.getItemAsync('user_token');
+      return {
+        success: data.exito === true || data.estado === 'exito',
+        data:    data.datos || data.empleado || null,
+        message: data.mensaje || '',
+      };
+    } catch (error) {
+      console.error('[PerfilService] consultar:', error.message);
+      return {
+        success: false,
+        data:    null,
+        message: error.normalizedMessage || 'Error al obtener los datos del perfil',
+      };
+    }
+  },
 
-            const response = await axios.post(`${API_URL}/movil`, {
-                modulo: 'perfil',
-                accion: 'consultar_perfil'
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+  /**
+   * Actualiza los datos del perfil del empleado autenticado.
+   *
+   * Consumido por: usePerfil → perfilService.actualizar(payload)
+   *
+   * @param {object}  datos                    - Datos a actualizar.
+   * @param {string}  [datos.correo]            - Nuevo correo.
+   * @param {string}  [datos.telefono]          - Nuevo teléfono.
+   * @param {string}  [datos.direccion]         - Nueva dirección.
+   * @param {string}  [datos.clave_actual]      - Contraseña actual (requerida para confirmar identidad).
+   * @param {string}  [datos.nueva_clave]       - Nueva contraseña (opcional).
+   * @param {string}  [datos.clave_confirmacion]- Confirmación de la nueva contraseña.
+   * @returns {Promise<{success: boolean, data: object|null, message: string}>}
+   */
+  actualizar: async (datos) => {
+    try {
+      const payload = { ...datos };
 
-            return {
-                success: response.data.estado === 'exito',
-                message: response.data.mensaje || '',
-                data: response.data.datos || null
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error.response?.data?.mensaje || 'Error al conectar con el servidor'
-            };
+      // Si el usuario ingresó nueva contraseña, mapearla al campo 'clave' que espera PerfilModel.php
+      if (payload.nueva_clave) {
+        payload.clave = payload.nueva_clave;
+        if (!payload.clave_confirmacion && payload.confirmar_clave) {
+          payload.clave_confirmacion = payload.confirmar_clave;
         }
-    },
+        delete payload.nueva_clave;
+        delete payload.confirmar_clave;
+      }
 
-    /**
-     * Actualiza los datos del perfil de empleado logueado
-     */
-    actualizar: async (datos) => {
-        try {
-            const token = await SecureStore.getItemAsync('user_token');
+      const response = await api.post('/perfil/actualizar', payload);
+      const data     = response.data;
 
-            const response = await axios.post(`${API_URL}/movil`, {
-                modulo: 'perfil',
-                accion: 'actualizar_perfil',
-                ...datos
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            return {
-                success: response.data.estado === 'exito',
-                message: response.data.mensaje || 'Perfil actualizado correctamente.',
-                data: response.data
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error.response?.data?.mensaje || 'Error al actualizar el perfil'
-            };
-        }
-    },
-
+      return {
+        success: data.exito === true || data.estado === 'exito',
+        data:    data.datos || null,
+        message: data.mensaje || 'Perfil actualizado correctamente',
+      };
+    } catch (error) {
+      console.error('[PerfilService] actualizar:', error.message);
+      return {
+        success: false,
+        data:    null,
+        message: error.normalizedMessage || 'Error al actualizar el perfil',
+      };
+    }
+  },
 };
 
 export default perfilService;

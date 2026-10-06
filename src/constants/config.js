@@ -1,46 +1,62 @@
 // ============================================
-// CONFIGURACIÓN DE LA API DIRPOLES 4
+// CONFIGURACIÓN GLOBAL DE DIRPOLES MOBILE
 // ============================================
 
-// IMPORTANTE: Cambia esta URL por la IP de tu computadora en la red local
-// Ejemplo: 'http://192.168.1.100/DIRPOLES_4/api'
-// Para pruebas locales con Expo Go en el mismo PC, usa la IP local
-export const API_URL = 'http://192.168.1.103/DIRPOLES_4/api';
-export const BASE_URL = 'http://192.168.1.103/DIRPOLES_4';
+/**
+ * URL base del servidor backend DIRPOLES-4.
+ * Cambia la IP por la dirección de tu servidor local o de producción.
+ * Ejemplo local: 'http://192.168.50.100/DIRPOLES-4'
+ */
+export const BASE_URL = 'http://192.168.50.100/DIRPOLES-4';
+
+/**
+ * Prefijo de la API REST de DIRPOLES-4.
+ * Todas las rutas de servicios se construyen a partir de esta URL.
+ */
+export const API_URL = `${BASE_URL}/api`;
 
 // ============================================
-// PALETA DE COLORES
+// PALETA DE COLORES CORPORATIVA
 // ============================================
 export const COLORS = {
-  // Colores primarios
-  primary: '#2563EB',      // Azul principal
-  primaryDark: '#1D4ED8', // Azul oscuro
-  primaryLight: '#DBEAFE', // Azul claro
+  // Primarios
+  primary:      '#2563EB',
+  primaryDark:  '#1D4ED8',
+  primaryLight: '#DBEAFE',
 
-  // Colores secundarios
-  secondary: '#64748B',    // Gris azulado
-  accent: '#10B981',       // Verde éxito
-  danger: '#EF4444',       // Rojo error
-  warning: '#F59E0B',      // Amarillo advertencia
-  info: '#3B82F6',         // Azul info
+  // Secundarios / Estado
+  secondary: '#64748B',
+  accent:    '#10B981',
+  danger:    '#EF4444',
+  warning:   '#F59E0B',
+  info:      '#3B82F6',
 
-  // Colores de fondo
-  background: '#F8FAFC',   // Fondo pantalla
-  surface: '#FFFFFF',      // Tarjetas/contenedores
-  border: '#E2E8F0',       // Bordes
+  // Fondos / Superficie
+  background: '#F8FAFC',
+  surface:    '#FFFFFF',
+  border:     '#E2E8F0',
 
-  // Colores de texto
-  text: '#1E293B',         // Texto principal
-  textSecondary: '#64748B', // Texto secundario
-  textMuted: '#94A3B8',    // Texto desactivado
-  textInverse: '#FFFFFF',  // Texto sobre fondos oscuros
+  // Tipografía
+  text:          '#1E293B',
+  textSecondary: '#64748B',
+  textMuted:     '#94A3B8',
+  textInverse:   '#FFFFFF',
 };
 
 // ============================================
-// CONFIGURACIÓN DE LA APP
+// CONFIGURACIÓN GENERAL DE LA APLICACIÓN
 // ============================================
 export const APP_CONFIG = {
-  name: 'DIRPOLES Mobile',
-  version: '1.0.0',
-  defaultTimeout: 10000, // 10 segundos para peticiones HTTP
+  name:           'DIRPOLES Mobile',
+  version:        '2.0.0',
+  defaultTimeout: 10000, // ms
+};
+
+// ============================================
+// CLAVES DE ALMACENAMIENTO SEGURO (SecureStore)
+// ============================================
+export const STORAGE_KEYS = {
+  JWT_TOKEN:     'jwt_token',
+  REFRESH_TOKEN: 'refresh_token',
+  USER_DATA:     'user_data',
 };

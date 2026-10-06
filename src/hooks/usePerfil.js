@@ -38,23 +38,31 @@ export const usePerfil = () => {
     const result = await perfilService.consultar();
     
     if (result.success && result.data) {
-      setPerfilData(result.data);
-      // Pre-cargar el formulario con los datos de BD
+      const d = result.data;
+      const computedPerfil = {
+        ...d,
+        cedula_completa: d.cedula_completa || `${d.tipo_cedula || 'V'}-${d.cedula || ''}`,
+        tipo: d.nombre_tipo || d.tipo || 'Personal',
+        estatus: typeof d.estatus === 'number' ? (d.estatus === 1 ? 'Activo' : 'Inactivo') : (d.estatus || 'Activo'),
+      };
+
+      setPerfilData(computedPerfil);
+      // Pre-cargar el formulario con los datos editables de BD
       setFormData({
-        nombre: result.data.nombre || '',
-        apellido: result.data.apellido || '',
-        correo: result.data.correo || '',
-        telefono: result.data.telefono || '',
-        direccion: result.data.direccion || '',
+        nombre: d.nombre || '',
+        apellido: d.apellido || '',
+        correo: d.correo || '',
+        telefono: d.telefono || '',
+        direccion: d.direccion || '',
         clave_actual: '',
         nueva_clave: '',
         confirmar_clave: '',
       });
       // Sincronizar también con AuthContext para asegurar coherencia
       updateUser({
-        nombre: result.data.nombre,
-        apellido: result.data.apellido,
-        tipo_empleado: result.data.tipo
+        nombre: d.nombre,
+        apellido: d.apellido,
+        tipo_empleado: computedPerfil.tipo
       });
     } else {
       setModalConfig({
@@ -100,18 +108,18 @@ export const usePerfil = () => {
 
     setIsSubmitting(true);
     
-    // Armar payload
+    // Armar payload acotado estrictamente a lo que acepta PerfilModel.php en DIRPOLES-4
+    // (jamás enviar nombre/apellido ya que son institucionales y lanzan error de atributo no reconocido)
     const payload = {
-      nombre: formData.nombre.trim(),
-      apellido: formData.apellido.trim(),
       correo: formData.correo.trim(),
       telefono: formData.telefono.trim(),
       direccion: formData.direccion.trim(),
+      clave_actual: formData.clave_actual,
     };
 
     if (formData.nueva_clave) {
-      payload.clave_actual = formData.clave_actual;
       payload.nueva_clave = formData.nueva_clave;
+      payload.confirmar_clave = formData.confirmar_clave;
     }
 
     const result = await perfilService.actualizar(payload);

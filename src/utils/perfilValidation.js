@@ -9,20 +9,6 @@ import { isRequired, isValidEmail, isValidPhone, isValidName, isValidAddress } f
 export const validatePerfilField = (name, value) => {
   let error = '';
   switch (name) {
-    case 'nombre':
-      if (!isRequired(value)) {
-        error = 'El nombre es obligatorio';
-      } else if (!isValidName(value)) {
-        error = 'Nombre inválido (solo letras, 2-50 caracteres)';
-      }
-      break;
-    case 'apellido':
-      if (!isRequired(value)) {
-        error = 'El apellido es obligatorio';
-      } else if (!isValidName(value)) {
-        error = 'Apellido inválido (solo letras, 2-50 caracteres)';
-      }
-      break;
     case 'correo':
       if (!isRequired(value)) {
         error = 'El correo electrónico es obligatorio';
@@ -38,14 +24,14 @@ export const validatePerfilField = (name, value) => {
       }
       break;
     case 'direccion':
-      if (!isRequired(value)) {
-        error = 'La dirección es obligatoria';
-      } else if (!isValidAddress(value)) {
+      if (value && !isValidAddress(value)) {
         error = 'Mínimo 5 caracteres y caracteres permitidos';
       }
       break;
     case 'clave_actual':
-      // Solo es obligatoria si se ingresó una nueva clave
+      if (!isRequired(value)) {
+        error = 'Debes ingresar tu contraseña actual para guardar los cambios';
+      }
       break;
     case 'nueva_clave':
       if (value && value.length < 8) {
@@ -62,8 +48,8 @@ export const validatePerfilField = (name, value) => {
 export const validatePerfilFormSync = (formData) => {
   const errors = {};
   
-  // Validar campos obligatorios
-  const fields = ['nombre', 'apellido', 'correo', 'telefono', 'direccion'];
+  // Validar campos editables (correo, telefono, direccion)
+  const fields = ['correo', 'telefono'];
   fields.forEach(field => {
     const error = validatePerfilField(field, formData[field]);
     if (error) {
@@ -71,15 +57,22 @@ export const validatePerfilFormSync = (formData) => {
     }
   });
 
-  // Validaciones cruzadas de contraseñas
+  if (formData.direccion) {
+    const dirErr = validatePerfilField('direccion', formData.direccion);
+    if (dirErr) errors.direccion = dirErr;
+  }
+
+  // La contraseña actual siempre es requerida por el backend para confirmar la identidad
+  const passActualErr = validatePerfilField('clave_actual', formData.clave_actual);
+  if (passActualErr) {
+    errors.clave_actual = passActualErr;
+  }
+
+  // Validaciones cruzadas de nueva contraseña
   if (formData.nueva_clave) {
     const newPassErr = validatePerfilField('nueva_clave', formData.nueva_clave);
     if (newPassErr) {
       errors.nueva_clave = newPassErr;
-    }
-
-    if (!formData.clave_actual) {
-      errors.clave_actual = 'Ingrese su contraseña actual para confirmar el cambio';
     }
 
     if (formData.nueva_clave !== formData.confirmar_clave) {

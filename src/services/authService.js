@@ -1,153 +1,193 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
+import { BASE_URL, API_URL, STORAGE_KEYS } from '../constants/config';
 import { encryptRSA } from '../utils/rsaEncrypt';
 
 /**
- * SERVICIO DE AUTENTICACIÓN (SOLID: Responsabilidad Única)
- * 
- * Este servicio se encarga exclusivamente de la comunicación con el 
- * backend DIRPOLES_4 para temas de acceso.
+ * SERVICIO DE AUTENTICACIÓN — DIRPOLES-4
+ *
+ * Todos los tokens llegan ahora en el body JSON (data.datos).
+ * El interceptor de Axios inyecta Authorization: Bearer en cada petición.
+ *
+ * Endpoints:
+ *  - Login:          POST  /iniciar_sesion
+ *  - Validar sesión: GET   /api/perfil/obtener
+ *  - Logout:         GET   /logout
+ *  - Refresh token:  POST  /refresh_token  { "refresh_token": "..." }
  */
-
-const TOKEN_KEY = 'user_token';
-const USER_DATA_KEY = 'user_data';
 
 const authService = {
   /**
-   * Intenta iniciar sesión en el backend
-   * @param {string} correo - Correo electrónico del usuario
-   * @param {string} password - Contraseña
+   * Inicia sesión cifrando la contraseña con RSA.
+   *
+   * Respuesta del backend:
+   * {
+   *   "exito": true,
+   *   "datos": {
+   *     "token": "eyJ...",
+   *     "refresh_token": "33efcf...",
+   *     "jwt_exp": 3600,
+   *     "usuario": { id_empleado, nombre, apellido, correo, tipo_empleado, ... }
+   *   }
+   * }
+   *
+   * @param {string} correo
+   * @param {string} password - En texto plano; se cifra aquí con RSA.
+   * @returns {Promise<{success: boolean, user: object|null, message: string}>}
    */
   login: async (correo, password) => {
     try {
-      // Cifrar la contraseña con RSA antes de enviarla al backend
       const encryptedPassword = encryptRSA(password);
-      
-      // Petición centralizada al controlador móvil
-      // Enviamos el campo 'accion' para que el switch del backend lo identifique
-      const response = await axios.post(`${API_URL}/movil`, {
-        modulo: 'general',
-        accion: 'login',
-        correo,
-        password: encryptedPassword
-      }, {
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
 
-      // El backend movilController retorna { estado: 'exito', mensaje: '...', token: '...', empleado: {...} }
-      if (response.data && response.data.estado === 'exito') {
-        // Persistencia del token y datos del empleado de forma segura
-        await SecureStore.setItemAsync(TOKEN_KEY, response.data.token);
-        await SecureStore.setItemAsync(USER_DATA_KEY, JSON.stringify(response.data.empleado));
-        
+      const response = await axios.post(
+        `${BASE_URL}/iniciar_sesion`,
+        { correo, password: encryptedPassword },
+        {
+          timeout: 10000,
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        },
+      );
+
+      const datos = response.data?.datos;
+
+      if (!datos?.token) {
         return {
-          success: true,
-          user: response.data.empleado,
-          message: response.data.mensaje
+          success: false,
+          user:    null,
+          message: response.data?.datos?.mensaje || 'El servidor no devolvió un token.',
         };
       }
 
-      // Manejo de estados específicos (error, bloqueado, etc.)
+      // Persistir credenciales en el almacenamiento seguro del dispositivo
+      await SecureStore.setItemAsync(STORAGE_KEYS.JWT_TOKEN,     datos.token);
+      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, datos.refresh_token ?? '');
+      await SecureStore.setItemAsync(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(datos.usuario ?? {}),
+      );
+
       return {
-        success: false,
-        message: response.data.mensaje || 'Credenciales inválidas'
+        success: true,
+        user:    datos.usuario ?? null,
+        message: datos.mensaje || 'Inicio de sesión exitoso',
       };
     } catch (error) {
-      console.error('[AuthService] Login Error:', error);
-      
-      let message = 'Error de conexión con el servidor';
-      if (error.response) {
-        message = error.response.data?.mensaje || `Error del servidor (${error.response.status})`;
-      } else if (error.request) {
-        message = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
-      }
-      
-      return {
-        success: false,
-        message: message
-      };
+      console.error('[AuthService] login error:', error.message);
+      const message =
+        error.response?.data?.datos?.mensaje ||
+        error.response?.data?.mensaje         ||
+        (error.request
+          ? 'No se recibió respuesta.\nVerifica que el servidor esté encendido y que estés en la misma red WiFi.'
+          : error.message);
+      return { success: false, user: null, message };
     }
   },
 
   /**
-   * Cierra la sesión eliminando los datos persistidos
-   */
-  logout: async () => {
-    try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      
-      // Intentar avisar al backend (opcional, no bloquea el cierre local)
-      if (token) {
-        await axios.post(`${API_URL}/movil`, {
-          modulo: 'general',
-          accion: 'logout'
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          timeout: 3000 // Timeout corto para no dejar esperando al usuario
-        }).catch(e => console.log('[AuthService] No se pudo avisar al backend del logout'));
-      }
-
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync(USER_DATA_KEY);
-      return true;
-    } catch (error) {
-      console.error('[AuthService] Logout Error:', error);
-      return false;
-    }
-  },
-
-  /**
-   * Recupera la sesión persistida y valida con el backend
+   * Verifica la sesión al arrancar la app.
+   *
+   * Endpoint: GET /api/perfil/obtener
+   * Respuesta: { "exito": true, "datos": { id_empleado, nombre, apellido, ... } }
+   *
+   * @returns {Promise<{isAuthenticated: boolean, user: object|null}>}
    */
   checkSession: async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      
-      if (!token) return { isAuthenticated: false };
+      const token = await SecureStore.getItemAsync(STORAGE_KEYS.JWT_TOKEN);
+      if (!token) return { isAuthenticated: false, user: null };
 
-      // Opcional: Validar el token con la acción 'me' del movilController
-      const response = await axios.post(`${API_URL}/movil`, {
-        modulo: 'general',
-        accion: 'me'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+      const response = await axios.get(`${API_URL}/perfil/obtener`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        timeout: 8000,
       });
 
-      if (response.data && response.data.estado === 'exito') {
-        return {
-          isAuthenticated: true,
-          user: response.data.empleado,
-          token: token
-        };
+      const datos = response.data?.datos;
+      if (response.data?.exito && datos) {
+        // Actualizar datos locales con los del servidor
+        await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(datos));
+        return { isAuthenticated: true, user: datos };
       }
-      
-      // Si el token es inválido (según el backend), limpiamos
-      await authService.logout();
-      return { isAuthenticated: false };
 
+      await authService.logout();
+      return { isAuthenticated: false, user: null };
     } catch (error) {
-      console.error('[AuthService] CheckSession Error:', error);
-      // En caso de error de red, podríamos confiar en los datos locales
-      // pero por seguridad es mejor re-validar.
-      const userData = await SecureStore.getItemAsync(USER_DATA_KEY);
-      if (userData) {
-        return {
-          isAuthenticated: true,
-          user: JSON.parse(userData),
-          token: await SecureStore.getItemAsync(TOKEN_KEY)
-        };
+      console.warn('[AuthService] checkSession error:', error.message);
+      // Fallo de red → confiar en los datos locales temporalmente
+      const localData = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA);
+      if (localData) {
+        try { return { isAuthenticated: true, user: JSON.parse(localData) }; } catch { /* corrupto */ }
       }
-      return { isAuthenticated: false };
+      return { isAuthenticated: false, user: null };
     }
-  }
+  },
+
+  /**
+   * Cierra sesión: notifica al backend y limpia el almacenamiento local.
+   *
+   * Endpoint: GET /logout
+   * El backend revoca el refresh_token en BD y destruye la sesión PHP.
+   *
+   * @returns {Promise<void>}
+   */
+  logout: async () => {
+    try {
+      const token = await SecureStore.getItemAsync(STORAGE_KEYS.JWT_TOKEN);
+      if (token) {
+        await axios
+          .get(`${BASE_URL}/logout`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            timeout: 4000,
+          })
+          .catch((e) => console.warn('[AuthService] logout backend error:', e.message));
+      }
+    } finally {
+      await Promise.allSettled([
+        SecureStore.deleteItemAsync(STORAGE_KEYS.JWT_TOKEN),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA),
+      ]);
+    }
+  },
+
+  /**
+   * Renueva el access token usando el refresh token.
+   * Llamado internamente por el interceptor de api.js.
+   *
+   * Endpoint: POST /refresh_token
+   * Body:     { "refresh_token": "..." }
+   * Respuesta: { "exito": true, "datos": { "token": "nuevo_jwt", "refresh_token": "nuevo_refresh" } }
+   *
+   * @param {string} refreshToken
+   * @returns {Promise<string|null>} Nuevo JWT o null si falló.
+   */
+  refreshToken: async (refreshToken) => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/refresh_token`,
+        { refresh_token: refreshToken },
+        {
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          timeout: 8000,
+        },
+      );
+
+      const datos    = response.data?.datos;
+      const newToken = datos?.token || datos?.access_token;
+
+      if (newToken) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.JWT_TOKEN, newToken);
+        // Rotar también el refresh token si el backend devuelve uno nuevo
+        if (datos?.refresh_token) {
+          await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, datos.refresh_token);
+        }
+        return newToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('[AuthService] refreshToken error:', error.message);
+      return null;
+    }
+  },
 };
 
 export default authService;

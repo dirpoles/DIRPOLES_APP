@@ -23,9 +23,16 @@ const CitaCard = ({ item, onEditPress, onInfoPress }) => {
     const openMenu = () => setVisible(true);
     const closeMenu = () => setVisible(false);
 
+    const nombreBeneficiario = item.beneficiario 
+        || (item.beneficiario_nombres ? `${item.beneficiario_nombres} ${item.beneficiario_apellidos || ''}`.trim() : 'Paciente');
+    const nombrePsicologo = item.psicologo || item.empleado || 'Especialista';
+
     // Obtener iniciales del beneficiario para el avatar
     const getInitials = (name) => {
-        return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
+        if (!name || name === 'Paciente') return 'PA';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[1][0]).toUpperCase();
     };
 
     // Colores dinámicos según el estado de la cita
@@ -55,25 +62,25 @@ const CitaCard = ({ item, onEditPress, onInfoPress }) => {
                     <View style={styles.avatarContainer}>
                         <Avatar.Text
                             size={48}
-                            label={getInitials(item.beneficiario)}
+                            label={getInitials(nombreBeneficiario)}
                             style={[styles.avatar, { backgroundColor: statusTheme.bg }]}
                             labelStyle={{ color: statusTheme.color }}
                         />
                     </View>
 
                     <View style={styles.infoContainer}>
-                        <Text style={styles.name}>{item.beneficiario}</Text>
+                        <Text style={styles.name}>{nombreBeneficiario}</Text>
                         
                         <View style={styles.detailRow}>
                             <User size={14} color={COLORS.textSecondary} />
-                            <Text style={styles.detailText}>Psic. {item.empleado}</Text>
+                            <Text style={styles.detailText}>Psic. {nombrePsicologo}</Text>
                         </View>
 
                         <View style={styles.detailRow}>
                             <Calendar size={14} color={COLORS.primary} />
-                            <Text style={styles.detailText}>{item.fecha_formateada}</Text>
+                            <Text style={styles.detailText}>{item.fecha_formateada || item.fecha}</Text>
                             <Clock size={14} color={COLORS.primary} style={{ marginLeft: 8 }} />
-                            <Text style={styles.detailText}>{item.hora_formateada}</Text>
+                            <Text style={styles.detailText}>{item.hora_formateada || item.hora}</Text>
                         </View>
                     </View>
 

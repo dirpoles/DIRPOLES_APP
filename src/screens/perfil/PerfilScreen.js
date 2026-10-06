@@ -101,6 +101,11 @@ export default function PerfilScreen({ navigation }) {
             />
             <Card.Content>
               <View style={styles.readonlyRow}>
+                <Text style={styles.readonlyLabel}>Nombre Completo</Text>
+                <Text style={styles.readonlyValue}>{`${perfilData?.nombre || ''} ${perfilData?.apellido || ''}`.trim() || 'Sin nombre'}</Text>
+              </View>
+              <Divider style={styles.divider} />
+              <View style={styles.readonlyRow}>
                 <Text style={styles.readonlyLabel}>Cédula de Identidad</Text>
                 <Text style={styles.readonlyValue}>{perfilData?.cedula_completa || 'Sin cédula'}</Text>
               </View>
@@ -117,35 +122,11 @@ export default function PerfilScreen({ navigation }) {
           {/* CARD 2: DATOS EDITABLES */}
           <Card style={styles.card}>
             <Card.Title 
-              title="Información Personal" 
+              title="Información Personal (Editable)" 
               titleStyle={styles.cardTitle}
               left={(props) => <User {...props} size={22} color={COLORS.primary} />}
             />
             <Card.Content style={styles.formContent}>
-              {/* Campo: Nombre */}
-              <TextInput
-                label="Nombre"
-                value={formData.nombre}
-                onChangeText={val => handleChange('nombre', val)}
-                mode="outlined"
-                error={!!errors.nombre}
-                style={styles.input}
-                left={<TextInput.Icon icon={() => <User size={20} color={errors.nombre ? COLORS.danger : COLORS.secondary} />} />}
-              />
-              {errors.nombre ? <Text style={styles.errorText}>{errors.nombre}</Text> : null}
-
-              {/* Campo: Apellido */}
-              <TextInput
-                label="Apellido"
-                value={formData.apellido}
-                onChangeText={val => handleChange('apellido', val)}
-                mode="outlined"
-                error={!!errors.apellido}
-                style={styles.input}
-                left={<TextInput.Icon icon={() => <User size={20} color={errors.apellido ? COLORS.danger : COLORS.secondary} />} />}
-              />
-              {errors.apellido ? <Text style={styles.errorText}>{errors.apellido}</Text> : null}
-
               {/* Campo: Correo */}
               <TextInput
                 label="Correo Electrónico"
@@ -186,13 +167,32 @@ export default function PerfilScreen({ navigation }) {
                 left={<TextInput.Icon icon={() => <MapPin size={20} color={errors.direccion ? COLORS.danger : COLORS.secondary} />} />}
               />
               {errors.direccion ? <Text style={styles.errorText}>{errors.direccion}</Text> : null}
+
+              <Divider style={[styles.divider, { marginVertical: 12 }]} />
+
+              <Text style={styles.securityHint}>
+                🔒 <Text style={{ fontWeight: '700' }}>Confirmación de Seguridad:</Text> Debes ingresar tu contraseña actual para guardar cualquier modificación en tu perfil.
+              </Text>
+
+              {/* Campo: Clave Actual (Obligatoria para guardar cualquier cambio) */}
+              <TextInput
+                label="Contraseña Actual *"
+                value={formData.clave_actual}
+                onChangeText={val => handleChange('clave_actual', val)}
+                mode="outlined"
+                secureTextEntry
+                error={!!errors.clave_actual}
+                style={styles.input}
+                left={<TextInput.Icon icon="lock" color={errors.clave_actual ? COLORS.danger : COLORS.secondary} />}
+              />
+              {errors.clave_actual ? <Text style={styles.errorText}>{errors.clave_actual}</Text> : null}
             </Card.Content>
           </Card>
 
           {/* CARD 3: CAMBIO DE CONTRASEÑA (Acordeón Colapsable Premium) */}
           <Card style={styles.card}>
             <List.Accordion
-              title="Seguridad / Cambiar Contraseña"
+              title="Cambiar Contraseña (Opcional)"
               titleStyle={[styles.cardTitle, { marginLeft: -8 }]}
               expanded={passwordSectionExpanded}
               onPress={() => setPasswordSectionExpanded(!passwordSectionExpanded)}
@@ -201,21 +201,8 @@ export default function PerfilScreen({ navigation }) {
             >
               <View style={styles.accordionContent}>
                 <Text style={styles.securityHint}>
-                  💡 Complete estos campos únicamente si desea establecer una nueva contraseña de acceso.
+                  💡 Complete estos campos únicamente si desea establecer una nueva contraseña de acceso al sistema.
                 </Text>
-
-                {/* Campo: Clave Actual */}
-                <TextInput
-                  label="Contraseña Actual"
-                  value={formData.clave_actual}
-                  onChangeText={val => handleChange('clave_actual', val)}
-                  mode="outlined"
-                  secureTextEntry
-                  error={!!errors.clave_actual}
-                  style={styles.input}
-                  left={<TextInput.Icon icon="lock" color={errors.clave_actual ? COLORS.danger : COLORS.secondary} />}
-                />
-                {errors.clave_actual ? <Text style={styles.errorText}>{errors.clave_actual}</Text> : null}
 
                 {/* Campo: Nueva Clave */}
                 <TextInput

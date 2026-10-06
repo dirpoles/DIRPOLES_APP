@@ -204,33 +204,37 @@ export default function HomeScreen() {
             </Text>
           </View>
         ) : (
-          selectedCitas.map(cita => (
-            <TouchableOpacity 
-              key={cita.id_cita} 
-              activeOpacity={0.7} 
-              onPress={() => handleCitaPress(cita)}
-              style={styles.appointmentCard}
-            >
-              <View style={styles.appointmentInfo}>
-                <View style={[styles.timeBadge, { backgroundColor: getStatusBgColor(cita.nombre_estado) }]}>
-                  <Clock size={14} color={getStatusDotColor(cita.nombre_estado)} />
-                  <Text style={[styles.timeText, { color: getStatusDotColor(cita.nombre_estado) }]}>
-                    {cita.hora_formateada}
-                  </Text>
+          selectedCitas.map(cita => {
+            const bNombre = cita.beneficiario || (cita.beneficiario_nombres ? `${cita.beneficiario_nombres} ${cita.beneficiario_apellidos || ''}`.trim() : 'Paciente');
+            const pNombre = cita.psicologo || cita.empleado || 'Especialista';
+            return (
+              <TouchableOpacity 
+                key={cita.id_cita} 
+                activeOpacity={0.7} 
+                onPress={() => handleCitaPress({ ...cita, beneficiario: bNombre, empleado: pNombre })}
+                style={styles.appointmentCard}
+              >
+                <View style={styles.appointmentInfo}>
+                  <View style={[styles.timeBadge, { backgroundColor: getStatusBgColor(cita.nombre_estado) }]}>
+                    <Clock size={14} color={getStatusDotColor(cita.nombre_estado)} />
+                    <Text style={[styles.timeText, { color: getStatusDotColor(cita.nombre_estado) }]}>
+                      {cita.hora_formateada || cita.hora}
+                    </Text>
+                  </View>
+                  <Text style={styles.patientName}>{bNombre}</Text>
+                  <Text style={styles.serviceType}>Psic. {pNombre}</Text>
                 </View>
-                <Text style={styles.patientName}>{cita.beneficiario}</Text>
-                <Text style={styles.serviceType}>Psic. {cita.empleado}</Text>
-              </View>
-              <View style={styles.rightActionContainer}>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(cita.nombre_estado) }]}>
-                  <Text style={[styles.statusBadgeText, { color: getStatusDotColor(cita.nombre_estado) }]}>
-                    {cita.nombre_estado}
-                  </Text>
+                <View style={styles.rightActionContainer}>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(cita.nombre_estado) }]}>
+                    <Text style={[styles.statusBadgeText, { color: getStatusDotColor(cita.nombre_estado) }]}>
+                      {cita.nombre_estado || 'Pendiente'}
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color={COLORS.border} />
                 </View>
-                <ChevronRight size={20} color={COLORS.border} />
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
 
       </ScrollView>
@@ -241,7 +245,7 @@ export default function HomeScreen() {
         onClose={() => setDetailsModalVisible(false)}
         title="Detalles de la Cita"
         message={selectedCitaDetails ? 
-          `👤 Paciente:\n${selectedCitaDetails.beneficiario}\n\n🧠 Especialista:\nPsic. ${selectedCitaDetails.empleado}\n\n📅 Fecha:\n${selectedCitaDetails.fecha_formateada}\n\n⏰ Hora:\n${selectedCitaDetails.hora_formateada}\n\n🏷️ Estado:\n${selectedCitaDetails.nombre_estado || 'Sin estado'}` 
+          `👤 Paciente:\n${selectedCitaDetails.beneficiario}\n\n🧠 Especialista:\nPsic. ${selectedCitaDetails.empleado}\n\n📅 Fecha:\n${selectedCitaDetails.fecha_formateada || selectedCitaDetails.fecha}\n\n⏰ Hora:\n${selectedCitaDetails.hora_formateada || selectedCitaDetails.hora}\n\n🏷️ Estado:\n${selectedCitaDetails.nombre_estado || 'Sin estado'}` 
           : ''
         }
         type="info"

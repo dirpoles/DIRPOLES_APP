@@ -1,43 +1,43 @@
-import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
+import api from './api';
 
 /**
- * SERVICIO: Reportes (SOLID: SRP)
- * Centraliza las llamadas API de consulta estadística consolidada.
+ * SERVICIO: Reportes Estadísticos (SOLID: SRP)
+ *
+ * Centraliza las peticiones HTTP del módulo de reportes y métricas
+ * contra la API REST de DIRPOLES-4.
+ *
+ * Contrato de salida (consumido por useReportes):
+ *   { success: boolean, data: object|null, message: string }
  */
+
 const reporteService = {
-
   /**
-   * Obtiene todos los indicadores estadísticos del sistema móvil
+   * Obtiene el resumen consolidado de indicadores estadísticos del sistema.
+   *
+   * Consumido por: useReportes → reporteService.obtenerEstadisticas()
+   *
+   * @param {'general'|string} [tipo='general'] - Tipo de reporte a consultar.
+   * @returns {Promise<{success: boolean, data: object|null, message: string}>}
    */
-  obtenerEstadisticas: async () => {
+  obtenerEstadisticas: async (tipo = 'general') => {
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-
-      const response = await axios.post(`${API_URL}/movil`, {
-        modulo: 'reportes',
-        accion: 'consultar_reportes_movil'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/reportes/stats?reporte=${encodeURIComponent(tipo)}`);
+      const data     = response.data;
 
       return {
-        success: response.data.estado === 'exito',
-        message: response.data.mensaje || '',
-        data: response.data.datos || null
+        success: data.exito === true || data.estado === 'exito',
+        data:    data.datos || data.data || null,
+        message: data.mensaje || '',
       };
     } catch (error) {
+      console.error('[ReporteService] obtenerEstadisticas:', error.message);
       return {
         success: false,
-        message: error.response?.data?.mensaje || 'Error al conectar con el servidor para cargar reportes'
+        data:    null,
+        message: error.normalizedMessage || 'Error al obtener las estadísticas del sistema',
       };
     }
-  }
-
+  },
 };
 
 export default reporteService;

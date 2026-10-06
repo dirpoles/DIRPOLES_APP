@@ -1,38 +1,30 @@
-import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../constants/config';
+import api from './api';
 
 /**
- * SERVICIO DE DATOS (CATÁLOGOS)
- * 
- * Se encarga de traer información necesaria para los formularios (PNFs, Secciones, etc.)
+ * SERVICIO DE DATOS (CATÁLOGOS) (SOLID: SRP)
+ *
+ * Centraliza la obtención de catálogos generales del sistema
+ * que no pertenecen a ningún módulo específico (PNFs, secciones, etc.).
  */
 const dataService = {
   /**
-   * Obtiene la lista de PNFs activos desde el backend
+   * Obtiene la lista de Programas Nacionales de Formación (PNFs) activos.
+   *
+   * Consumido por: BeneficiarioForm → dataService.getPNFs()
+   *
+   * @returns {Promise<Array>} Array de PNFs o array vacío en caso de error.
    */
   getPNFs: async () => {
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await axios.post(`${API_URL}/movil`, {
-        modulo: 'beneficiarios',
-        accion: 'obtener_pnf'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/beneficiarios/pnfs');
+      const data     = response.data;
 
-      if (response.data && response.data.estado === 'exito') {
-        return response.data.datos;
-      }
-      return [];
+      return data.datos || data.data || [];
     } catch (error) {
-      console.error('[DataService] Error al obtener PNFs:', error);
+      console.error('[DataService] getPNFs:', error.message);
       return [];
     }
-  }
+  },
 };
 
 export default dataService;
