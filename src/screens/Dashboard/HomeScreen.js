@@ -17,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Clock, ChevronRight, ClipboardList } from 'lucide-react-native';
 import CustomModal from '../../components/UI/CustomModal';
 
+import { canAccessModule, getAccessDeniedMessage } from '../../utils/permissions';
+
 // Configuración de idioma para el calendario (Español)
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
@@ -52,6 +54,11 @@ export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(getTodayDateString());
   const [selectedCitaDetails, setSelectedCitaDetails] = useState(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [permissionModal, setPermissionModal] = useState({
+    visible: false,
+    title: '',
+    message: ''
+  });
 
   // Paleta de colores para los estados de la cita (Consistente con CitaCard)
   const getStatusDotColor = (nombre_estado) => {
@@ -124,6 +131,14 @@ export default function HomeScreen() {
   };
 
   const handleSeeAll = () => {
+    if (!canAccessModule(user, 'Citas')) {
+      setPermissionModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: getAccessDeniedMessage(user, 'Citas')
+      });
+      return;
+    }
     // Navegar directamente a la pestaña Citas
     navigation.navigate('Citas');
   };
@@ -250,6 +265,17 @@ export default function HomeScreen() {
         }
         type="info"
         buttonText="Cerrar"
+      />
+
+      {/* MODAL DE ADVERTENCIA DE PERMISOS */}
+      <CustomModal
+        visible={permissionModal.visible}
+        type="warning"
+        title={permissionModal.title}
+        message={permissionModal.message}
+        confirmText="Entendido"
+        onClose={() => setPermissionModal(prev => ({ ...prev, visible: false }))}
+        onConfirm={() => setPermissionModal(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
   );

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Home, Users, CalendarDays, Package, BarChart3, User, LogOut } from 'lucide-react-native';
 import { COLORS } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
 import { IconButton } from 'react-native-paper';
+import { canAccessModule, getAccessDeniedMessage } from '../utils/permissions';
 
 // Pantallas
 import HomeScreen from '../screens/Dashboard/HomeScreen';
@@ -20,11 +21,31 @@ const Tab = createBottomTabNavigator();
 /**
  * NAVEGADOR POR PESTAÑAS (BOTTOM TABS)
  * 
- * Centraliza la navegación principal de la aplicación.
+ * Centraliza la navegación principal e intercepta el acceso a módulos
+ * según la matriz de permisos por rol de usuario (Médico, Psicólogo, Admin).
  */
 export default function TabNavigator() {
-  const { logout } = useAuth();
-  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
+  const { user, logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [permissionModal, setPermissionModal] = useState({
+    visible: false,
+    title: '',
+    message: ''
+  });
+
+  /**
+   * Listener centralizado para validar permisos al tocar una pestaña
+   */
+  const handleTabPress = (e, moduleName) => {
+    if (!canAccessModule(user, moduleName)) {
+      e.preventDefault(); // Detener la navegación hacia la pantalla restringida
+      setPermissionModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: getAccessDeniedMessage(user, moduleName)
+      });
+    }
+  };
 
   return (
     <>
@@ -79,12 +100,18 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => handleTabPress(e, 'Inicio')
+          }}
         />
         <Tab.Screen 
           name="Beneficiarios" 
           component={BeneficiariosScreen} 
           options={{
             tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
+          }}
+          listeners={{
+            tabPress: (e) => handleTabPress(e, 'Beneficiarios')
           }}
         />
         <Tab.Screen 
@@ -93,12 +120,18 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ color, size }) => <CalendarDays size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => handleTabPress(e, 'Citas')
+          }}
         />
         <Tab.Screen 
           name="Inventario" 
           component={InventarioScreen} 
           options={{
             tabBarIcon: ({ color, size }) => <Package size={size} color={color} />,
+          }}
+          listeners={{
+            tabPress: (e) => handleTabPress(e, 'Inventario')
           }}
         />
         <Tab.Screen 
@@ -107,8 +140,22 @@ export default function TabNavigator() {
           options={{
             tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
           }}
+          listeners={{
+            tabPress: (e) => handleTabPress(e, 'Reportes')
+          }}
         />
       </Tab.Navigator>
+
+      {/* Modal de Advertencia de Permisos Insuficientes */}
+      <CustomModal
+        visible={permissionModal.visible}
+        type="warning"
+        title={permissionModal.title}
+        message={permissionModal.message}
+        confirmText="Entendido"
+        onClose={() => setPermissionModal(prev => ({ ...prev, visible: false }))}
+        onConfirm={() => setPermissionModal(prev => ({ ...prev, visible: false }))}
+      />
 
       {/* Modal de Confirmación de Cierre de Sesión */}
       <CustomModal
