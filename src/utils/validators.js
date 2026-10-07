@@ -60,12 +60,12 @@ export const isValidSectionNumber = (section) => {
 };
 
 /**
- * Valida una contraseña (exactamente 8 caracteres, al menos una letra)
+ * Valida la contraseña (al menos 6 caracteres, acepta cualquier carácter especial como puntos, guiones, etc.)
  * @param {string} password 
  */
 export const isValidPassword = (password) => {
-  const regex = /^(?=.*[A-Za-z])[A-Za-z\d]{8}$/;
-  return regex.test(password);
+  if (!password || typeof password !== 'string') return false;
+  return password.length >= 6;
 };
 
 /**

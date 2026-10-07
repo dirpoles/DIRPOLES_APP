@@ -73,12 +73,24 @@ const authService = {
       };
     } catch (error) {
       console.error('[AuthService] login error:', error.message);
-      const message =
-        error.response?.data?.datos?.mensaje ||
-        error.response?.data?.mensaje         ||
-        (error.request
-          ? 'No se recibió respuesta.\nVerifica que el servidor esté encendido y que estés en la misma red WiFi.'
-          : error.message);
+      let message;
+      if (error.response) {
+        // El servidor respondió con un código de estado fuera del rango 2xx (ej: 400 Bad Request, 401 Unauthorized, 500)
+        message =
+          error.response.data?.datos?.mensaje ||
+          error.response.data?.error?.mensaje ||
+          error.response.data?.mensaje       ||
+          error.response.data?.error         ||
+          error.response.data?.message       ||
+          (error.response.status === 400 || error.response.status === 401
+            ? 'Correo o contraseña incorrectos. Por favor, verifica tus datos.'
+            : `Error en el servidor (${error.response.status}). Inténtalo más tarde.`);
+      } else if (error.request) {
+        // La petición fue enviada pero no se recibió respuesta (error de red)
+        message = 'No se pudo conectar con el servidor.\nVerifica que el servidor esté encendido y que estés en la misma red WiFi.';
+      } else {
+        message = error.message || 'Error inesperado al intentar iniciar sesión.';
+      }
       return { success: false, user: null, message };
     }
   },

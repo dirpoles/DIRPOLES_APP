@@ -32,7 +32,7 @@ export const useLoginForm = () => {
         break;
       case 'password':
         if (!isRequired(value)) error = 'La contraseña es obligatoria';
-        else if (!isValidPassword(value)) error = 'Debe tener 8 caracteres (letras y números)';
+        else if (!isValidPassword(value)) error = 'Debe tener al menos 6 caracteres';
         break;
       default:
         break;
