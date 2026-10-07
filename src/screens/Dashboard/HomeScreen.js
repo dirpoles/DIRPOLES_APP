@@ -3,12 +3,12 @@ import {
   StyleSheet, 
   View, 
   Text, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { COLORS } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';

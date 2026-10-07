@@ -3,7 +3,6 @@ import {
   StyleSheet, 
   View, 
   Text, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   RefreshControl,
@@ -11,6 +10,7 @@ import {
   Platform,
   StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button, Divider } from 'react-native-paper';
 import { 
   BarChart3, 

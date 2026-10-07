@@ -5,10 +5,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   TouchableOpacity,
   Animated
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, IconButton } from 'react-native-paper';
 import { ArrowLeft, UserPlus } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';

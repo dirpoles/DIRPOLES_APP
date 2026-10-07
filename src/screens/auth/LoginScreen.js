@@ -6,11 +6,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SafeAreaView,
   Alert,
   Dimensions,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button, IconButton, useTheme, ActivityIndicator } from 'react-native-paper';
 import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
 import { useLoginForm } from '../../hooks/useLoginForm';

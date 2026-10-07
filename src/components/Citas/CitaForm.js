@@ -61,23 +61,58 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
 
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
 
+  // Utilidades seguras para extraer nombre y cédula del objeto del backend
+  const getBenName = (b) => {
+    if (!b) return '';
+    if (b.nombre_completo) return b.nombre_completo;
+    if (b.nombres || b.apellidos) return `${b.nombres || ''} ${b.apellidos || ''}`.trim();
+    if (b.nombre || b.apellido) return `${b.nombre || ''} ${b.apellido || ''}`.trim();
+    return 'Paciente';
+  };
+
+  const getBenCedula = (b) => {
+    if (!b) return '';
+    if (b.cedula_completa) return b.cedula_completa;
+    if (b.cedula) return `${b.letra_cedula || 'V'}-${b.cedula}`;
+    if (b.num_cedula) return `${b.letra_cedula || 'V'}-${b.num_cedula}`;
+    return '';
+  };
+
+  const getPsiName = (p) => {
+    if (!p) return '';
+    if (p.nombre_completo) return p.nombre_completo;
+    if (p.nombres || p.apellidos) return `${p.nombres || ''} ${p.apellidos || ''}`.trim();
+    if (p.nombre || p.apellido) return `${p.nombre || ''} ${p.apellido || ''}`.trim();
+    return 'Especialista';
+  };
+
+  const getPsiCedula = (p) => {
+    if (!p) return '';
+    if (p.cedula_completa) return p.cedula_completa;
+    if (p.cedula) return `${p.letra_cedula || 'V'}-${p.cedula}`;
+    if (p.num_cedula) return `${p.letra_cedula || 'V'}-${p.num_cedula}`;
+    return p.cargo || 'Psicólogo';
+  };
+
   // Filtrado de listas OPTIMIZADO
   const filteredBeneficiarios = useMemo(() => {
     if (!searchBen) return beneficiarios;
     const q = searchBen.toLowerCase();
-    return beneficiarios.filter(b => 
-      b.nombre_completo.toLowerCase().includes(q) ||
-      b.cedula_completa.toLowerCase().includes(q)
-    );
+    return beneficiarios.filter(b => {
+      const name = getBenName(b).toLowerCase();
+      const cedula = getBenCedula(b).toLowerCase();
+      return name.includes(q) || cedula.includes(q);
+    });
   }, [beneficiarios, searchBen]);
 
   const filteredPsicologos = useMemo(() => {
     if (!searchPsi) return psicologos;
     const q = searchPsi.toLowerCase();
-    return psicologos.filter(p => 
-      p.nombre_completo.toLowerCase().includes(q) ||
-      p.cedula_completa.toLowerCase().includes(q)
-    );
+    return psicologos.filter(p => {
+      const name = getPsiName(p).toLowerCase();
+      const cedula = getPsiCedula(p).toLowerCase();
+      return name.includes(q) || cedula.includes(q);
+    });
   }, [psicologos, searchPsi]);
 
   // Manejadores de Fecha y Hora
@@ -109,14 +144,18 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
 
   const getSelectedBeneficiarioName = () => {
     if (isEditMode && initialData?.beneficiario) return initialData.beneficiario;
-    const ben = beneficiarios.find(b => b.id_beneficiario === formData.id_beneficiario);
-    return ben ? ben.nombre_completo : 'Seleccione un paciente';
+    const benId = formData.id_beneficiario;
+    if (!benId) return 'Seleccione un paciente';
+    const ben = beneficiarios.find(b => (b.id_beneficiario || b.id) == benId);
+    return ben ? getBenName(ben) : 'Seleccione un paciente';
   };
 
   const getSelectedPsicologoName = () => {
     if (isEditMode && initialData?.empleado) return initialData.empleado;
-    const psi = psicologos.find(p => p.id_empleado === formData.id_empleado);
-    return psi ? psi.nombre_completo : 'Seleccione un psicólogo';
+    const psiId = formData.id_empleado;
+    if (!psiId) return 'Seleccione un psicólogo';
+    const psi = psicologos.find(p => (p.id_empleado || p.id) == psiId);
+    return psi ? getPsiName(psi) : 'Seleccione un psicólogo';
   };
 
   const getSelectedEstatusName = () => {
@@ -317,24 +356,28 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
           <Divider />
           <FlatList
             data={filteredBeneficiarios}
-            keyExtractor={(item) => item.id_beneficiario.toString()}
+            keyExtractor={(item) => String(item.id_beneficiario || item.id || Math.random())}
             keyboardShouldPersistTaps="handled"
             removeClippedSubviews={false}
             style={{ maxHeight: 400 }}
             ListEmptyComponent={<Text style={styles.noResults}>No se encontraron resultados</Text>}
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.nombre_completo}
-                description={item.cedula_completa}
-                onPress={() => {
-                  handleChange('id_beneficiario', item.id_beneficiario);
-                  setBeneficiarioModalVisible(false);
-                  setSearchBen('');
-                }}
-                left={props => <List.Icon {...props} icon="account" />}
-                style={formData.id_beneficiario === item.id_beneficiario ? styles.selectedItem : null}
-              />
-            )}
+            renderItem={({ item }) => {
+              const benId = item.id_beneficiario || item.id;
+              const isSelected = formData.id_beneficiario == benId;
+              return (
+                <List.Item
+                  title={getBenName(item)}
+                  description={getBenCedula(item)}
+                  onPress={() => {
+                    handleChange('id_beneficiario', benId);
+                    setBeneficiarioModalVisible(false);
+                    setSearchBen('');
+                  }}
+                  left={props => <List.Icon {...props} icon="account" />}
+                  style={isSelected ? styles.selectedItem : null}
+                />
+              );
+            }}
           />
         </Modal>
 
@@ -360,24 +403,28 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
           <Divider />
           <FlatList
             data={filteredPsicologos}
-            keyExtractor={(item) => item.id_empleado.toString()}
+            keyExtractor={(item) => String(item.id_empleado || item.id || Math.random())}
             keyboardShouldPersistTaps="handled"
             removeClippedSubviews={false}
             style={{ maxHeight: 400 }}
             ListEmptyComponent={<Text style={styles.noResults}>No se encontraron resultados</Text>}
-            renderItem={({ item }) => (
-              <List.Item
-                title={item.nombre_completo}
-                description={item.cargo || "Psicólogo"}
-                onPress={() => {
-                  handleChange('id_empleado', item.id_empleado);
-                  setPsicologoModalVisible(false);
-                  setSearchPsi('');
-                }}
-                left={props => <List.Icon {...props} icon="doctor" />}
-                style={formData.id_empleado === item.id_empleado ? styles.selectedItem : null}
-              />
-            )}
+            renderItem={({ item }) => {
+              const psiId = item.id_empleado || item.id;
+              const isSelected = formData.id_empleado == psiId;
+              return (
+                <List.Item
+                  title={getPsiName(item)}
+                  description={getPsiCedula(item)}
+                  onPress={() => {
+                    handleChange('id_empleado', psiId);
+                    setPsicologoModalVisible(false);
+                    setSearchPsi('');
+                  }}
+                  left={props => <List.Icon {...props} icon="doctor" />}
+                  style={isSelected ? styles.selectedItem : null}
+                />
+              );
+            }}
           />
         </Modal>
 

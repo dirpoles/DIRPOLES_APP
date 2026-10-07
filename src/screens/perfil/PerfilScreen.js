@@ -3,7 +3,6 @@ import {
   StyleSheet, 
   View, 
   Text, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   KeyboardAvoidingView, 
@@ -11,6 +10,7 @@ import {
   ActivityIndicator,
   StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button, Card, Avatar, Divider, List } from 'react-native-paper';
 import { ArrowLeft, User, Mail, Phone, MapPin, Key, Save, ShieldAlert, Award } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
