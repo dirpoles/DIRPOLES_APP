@@ -11,7 +11,7 @@ import {
   StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Button, Divider } from 'react-native-paper';
+import { Card, Button, Divider, Chip } from 'react-native-paper';
 import { 
   BarChart3, 
   Users, 
@@ -24,7 +24,9 @@ import {
   Clock, 
   AlertTriangle,
   Layers,
-  Sparkles
+  Sparkles,
+  Download,
+  Filter
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 import { useReportes } from '../../hooks/useReportes';
@@ -34,16 +36,19 @@ import { useReportes } from '../../hooks/useReportes';
  * 
  * Renderiza un dashboard gerencial interactivo de alto impacto visual. Muestra
  * métricas críticas de Beneficiarios, Citas e Inventario Médico mediante
- * medidores y micro-indicadores proporcionales, sin dependencias propensas a errores.
+ * medidores y micro-indicadores proporcionales, con exportación a PDF nativa.
  */
 export default function ReportesScreen() {
   const {
     reporteData,
     loading,
     refreshing,
+    exportingingPdf,
     error,
+    periodo,
+    setPeriodo,
     handleRefresh,
-    abrirReporteWeb
+    exportarPDF
   } = useReportes();
 
   // Estado del segmento activo: 'beneficiarios', 'citas', 'inventario'
@@ -130,7 +135,7 @@ export default function ReportesScreen() {
           <Card.Title 
             title="PNFs con Mayor Afluencia" 
             titleStyle={styles.cardTitle}
-            subtitle="Top 5 programas académicos"
+            subtitle="Programas académicos"
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
@@ -166,9 +171,8 @@ export default function ReportesScreen() {
   const renderCitasSection = () => {
     const data = reporteData?.citas || { total: 0, estados: [] };
 
-    // Mapear iconos y colores para los estados
     const getStatusConfig = (statusName) => {
-      const name = statusName.toLowerCase();
+      const name = (statusName || '').toLowerCase();
       if (name.includes('atendid')) return { color: COLORS.accent, icon: CheckCircle2 };
       if (name.includes('pendient') || name.includes('programad')) return { color: COLORS.info, icon: Clock };
       if (name.includes('confirmad')) return { color: COLORS.primary, icon: Sparkles };
@@ -234,13 +238,6 @@ export default function ReportesScreen() {
   const renderInventarioSection = () => {
     const data = reporteData?.inventario || { total_insumos: 0, total_unidades: 0, estatus: [], tipos: [] };
 
-    const getStockConfig = (estatusName) => {
-      const name = estatusName.toLowerCase();
-      if (name.includes('disponibl') || name.includes('activo')) return { color: COLORS.accent };
-      if (name.includes('vencid')) return { color: COLORS.danger };
-      return { color: COLORS.warning };
-    };
-
     return (
       <View style={styles.sectionContainer}>
         {/* Grid Dual de Cards */}
@@ -248,38 +245,37 @@ export default function ReportesScreen() {
           <Card style={[styles.statCard, { flex: 1, marginRight: 8 }]}>
             <Card.Content style={[styles.statCardContent, { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
               <View style={[styles.iconContainer, { backgroundColor: COLORS.primaryLight, width: 40, height: 40 }]}>
-                <Package size={22} color={COLORS.primary} />
+                <Package size={20} color={COLORS.primary} />
               </View>
-              <Text style={[styles.statLabel, { fontSize: 11 }]}>Tipos de Insumos</Text>
-              <Text style={[styles.statNumber, { fontSize: 22 }]}>{data.total_insumos}</Text>
+              <Text style={styles.statLabel}>Insumos Distintos</Text>
+              <Text style={[styles.statNumber, { fontSize: 24 }]}>{data.total_insumos}</Text>
             </Card.Content>
           </Card>
 
           <Card style={[styles.statCard, { flex: 1, marginLeft: 8 }]}>
             <Card.Content style={[styles.statCardContent, { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
               <View style={[styles.iconContainer, { backgroundColor: '#DEF7EC', width: 40, height: 40 }]}>
-                <TrendingUp size={22} color={COLORS.accent} />
+                <TrendingUp size={20} color="#03543F" />
               </View>
-              <Text style={[styles.statLabel, { fontSize: 11 }]}>Unidades Totales</Text>
-              <Text style={[styles.statNumber, { fontSize: 22 }]}>{data.total_unidades}</Text>
+              <Text style={styles.statLabel}>Total Unidades</Text>
+              <Text style={[styles.statNumber, { fontSize: 24, color: '#03543F' }]}>{data.total_unidades}</Text>
             </Card.Content>
           </Card>
         </View>
 
-        {/* Sección: Condición del Stock */}
+        {/* Sección: Estatus de Stock */}
         <Card style={styles.visualCard}>
           <Card.Title 
-            title="Condición del Inventario" 
+            title="Estatus del Stock" 
             titleStyle={styles.cardTitle}
-            subtitle="Condición médica y alertas de vencimiento"
+            subtitle="Disponibilidad general de medicamentos y materiales"
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
             {data.estatus.length === 0 ? (
-              <Text style={styles.emptyText}>No hay insumos registrados en el inventario.</Text>
+              <Text style={styles.emptyText}>No hay datos de inventario.</Text>
             ) : (
               data.estatus.map((item, idx) => {
-                const config = getStockConfig(item.estatus);
                 const itemTotal = parseInt(item.total) || 0;
                 const totalPct = data.total_insumos > 0 ? Math.round((itemTotal / data.total_insumos) * 100) : 0;
 
@@ -287,45 +283,10 @@ export default function ReportesScreen() {
                   <View key={idx} style={styles.progressRow}>
                     <View style={styles.progressRowHeader}>
                       <Text style={styles.progressRowName}>{item.estatus}</Text>
-                      <Text style={styles.progressRowVal}>{itemTotal} ({totalPct}%)</Text>
+                      <Text style={styles.progressRowVal}>{itemTotal} insumos ({totalPct}%)</Text>
                     </View>
                     <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${totalPct}%`, backgroundColor: config.color }]} />
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* Sección: Clasificación */}
-        <Card style={styles.visualCard}>
-          <Card.Title 
-            title="Clasificación por Tipo" 
-            titleStyle={styles.cardTitle}
-            subtitle="Medicamentos vs Material Médico e Instrumental"
-            subtitleStyle={styles.cardSubtitle}
-          />
-          <Card.Content>
-            {data.tipos.length === 0 ? (
-              <Text style={styles.emptyText}>No hay datos clasificados.</Text>
-            ) : (
-              data.tipos.map((item, idx) => {
-                const itemTotal = parseInt(item.total) || 0;
-                const totalPct = data.total_insumos > 0 ? Math.round((itemTotal / data.total_insumos) * 100) : 0;
-
-                return (
-                  <View key={idx} style={styles.progressRow}>
-                    <View style={styles.progressRowHeader}>
-                      <View style={styles.iconLabelGroup}>
-                        <Layers size={16} color={COLORS.secondary} style={{ marginRight: 6 }} />
-                        <Text style={styles.progressRowName}>{item.tipo}</Text>
-                      </View>
-                      <Text style={styles.progressRowVal}>{itemTotal} u.</Text>
-                    </View>
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${totalPct}%`, backgroundColor: COLORS.secondary }]} />
+                      <View style={[styles.progressBarFill, { width: `${totalPct}%`, backgroundColor: COLORS.primary }]} />
                     </View>
                   </View>
                 );
@@ -339,12 +300,28 @@ export default function ReportesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* CABECERA PREMIUM */}
+      {/* HEADER PRINCIPAL */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Estadísticas</Text>
-          <Text style={styles.subtitle}>Reportes gerenciales consolidados de DIRPOLES</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Reportes</Text>
+          <Text style={styles.subtitle}>Estadísticas consolidadas UPTAEB - DIRPOLES</Text>
         </View>
+        
+        {/* BOTÓN FLOTANTE PARA EXPORTAR A PDF */}
+        <TouchableOpacity 
+          style={styles.pdfHeaderButton}
+          onPress={exportarPDF}
+          disabled={exportingingPdf}
+        >
+          {exportingingPdf ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <>
+              <Download size={16} color="#FFF" style={{ marginRight: 6 }} />
+              <Text style={styles.pdfHeaderButtonText}>PDF</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -358,6 +335,30 @@ export default function ReportesScreen() {
           />
         }
       >
+        {/* FILTRO DE PERÍODO */}
+        <View style={styles.filterBar}>
+          <Filter size={16} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+          <Text style={styles.filterTitle}>Período:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {[
+              { id: 'todos', label: 'Histórico' },
+              { id: 'mes', label: 'Este Mes' },
+              { id: 'semana', label: 'Esta Semana' },
+              { id: 'hoy', label: 'Hoy' },
+            ].map(p => (
+              <Chip
+                key={p.id}
+                selected={periodo === p.id}
+                onPress={() => setPeriodo(p.id)}
+                style={[styles.chip, periodo === p.id && styles.chipActive]}
+                textStyle={[styles.chipText, periodo === p.id && styles.chipTextActive]}
+              >
+                {p.label}
+              </Chip>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* SEGMENTED CONTROL / SELECTOR DE PESTAÑAS */}
         <View style={styles.segmentContainer}>
           <TouchableOpacity 
@@ -396,28 +397,30 @@ export default function ReportesScreen() {
         {activeSegment === 'citas' && renderCitasSection()}
         {activeSegment === 'inventario' && renderInventarioSection()}
 
-        {/* CARD FOOTER: REDIRECCIÓN WEB PARA EXPORTAR PDF */}
+        {/* CARD FOOTER: BOTÓN DE EXPORTAR PDF */}
         <Card style={styles.exportCard}>
           <Card.Content>
             <View style={styles.exportRow}>
               <FileText size={28} color={COLORS.primary} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.exportTitle}>Reportes Oficiales PDF / Excel</Text>
+                <Text style={styles.exportTitle}>Generar Informe PDF Formal</Text>
                 <Text style={styles.exportDescription}>
-                  Para descargar actas de auditoría impresas o reportes filtrados formalmente, por favor utilice el portal web del sistema DIRPOLES.
+                  Exporta las estadísticas consolidadas con formato ejecutivo para presentar ante las autoridades o compartir por WhatsApp y correo.
                 </Text>
               </View>
             </View>
             <Divider style={{ marginVertical: 14 }} />
             <Button
               mode="contained"
-              onPress={abrirReporteWeb}
+              onPress={exportarPDF}
+              loading={exportingingPdf}
+              disabled={exportingingPdf}
               style={styles.exportButton}
               contentStyle={styles.exportButtonContent}
               labelStyle={styles.exportButtonText}
-              icon={() => <ArrowRight color="#FFF" size={18} />}
+              icon={() => <Download color="#FFF" size={18} />}
             >
-              Acceder a Reportes Web
+              Exportar Reporte a PDF
             </Button>
           </Card.Content>
         </Card>
@@ -433,10 +436,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 15 : 20,
-    paddingBottom: 15,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 15,
+    paddingBottom: 12,
     backgroundColor: COLORS.background,
   },
   title: {
@@ -449,23 +465,65 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  scrollContent: {
+  pdfHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    elevation: 2,
+  },
+  pdfHeaderButtonText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  filterTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginRight: 8,
+  },
+  chip: {
+    backgroundColor: COLORS.surface,
+    height: 32,
+  },
+  chipActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  chipText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  chipTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
   segmentContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
     borderRadius: 14,
     padding: 4,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   segmentButton: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 10,
     gap: 6,
@@ -474,9 +532,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
   },
   segmentText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
     color: COLORS.textMuted,
+    fontWeight: '600',
   },
   segmentTextActive: {
     color: COLORS.primary,
@@ -486,72 +544,69 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   statCard: {
-    borderRadius: 20,
     backgroundColor: COLORS.surface,
+    borderRadius: 16,
     elevation: 2,
     borderWidth: 1,
     borderColor: COLORS.border,
-    overflow: 'hidden',
   },
   statCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconContainer: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
   },
   statCardText: {
-    marginLeft: 16,
+    justifyContent: 'center',
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: COLORS.textSecondary,
   },
   statNumber: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '800',
     color: COLORS.text,
-    marginTop: 2,
   },
   visualCard: {
-    borderRadius: 20,
     backgroundColor: COLORS.surface,
+    borderRadius: 16,
     elevation: 2,
     borderWidth: 1,
     borderColor: COLORS.border,
-    overflow: 'hidden',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: COLORS.text,
   },
   cardSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textSecondary,
   },
   dualBarContainer: {
+    height: 12,
     flexDirection: 'row',
-    height: 24,
-    borderRadius: 12,
+    borderRadius: 6,
     overflow: 'hidden',
-    marginTop: 8,
+    marginBottom: 16,
   },
   dualBarLeft: {
-    backgroundColor: '#EC4899', // Pink
+    backgroundColor: '#EC4899',
   },
   dualBarRight: {
-    backgroundColor: COLORS.primary, // Blue
+    backgroundColor: COLORS.primary,
   },
   legendRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
+    justifyContent: 'space-around',
   },
   legendItem: {
     flexDirection: 'row',
@@ -561,27 +616,25 @@ const styles = StyleSheet.create({
   legendDot: {
     width: 12,
     height: 12,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   legendName: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    fontWeight: '500',
   },
   legendVal: {
-    fontSize: 13,
-    color: COLORS.text,
+    fontSize: 14,
     fontWeight: '700',
-    marginTop: 1,
+    color: COLORS.text,
   },
   progressRow: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressRowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   iconLabelGroup: {
     flexDirection: 'row',
@@ -589,18 +642,17 @@ const styles = StyleSheet.create({
   },
   progressRowName: {
     fontSize: 13,
-    color: COLORS.text,
     fontWeight: '600',
-    maxWidth: '75%',
+    color: COLORS.text,
   },
   progressRowVal: {
     fontSize: 13,
-    color: COLORS.textSecondary,
     fontWeight: '700',
+    color: COLORS.textSecondary,
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.background,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -610,62 +662,45 @@ const styles = StyleSheet.create({
   },
   dualGrid: {
     flexDirection: 'row',
-    marginBottom: 4,
+    justifyContent: 'space-between',
   },
   emptyText: {
     textAlign: 'center',
-    color: COLORS.textMuted,
+    paddingVertical: 16,
+    color: COLORS.textSecondary,
     fontSize: 13,
-    marginVertical: 12,
   },
   exportCard: {
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF', // Light blue tint
+    marginTop: 24,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    marginTop: 24,
-    marginBottom: 16,
-    overflow: 'hidden',
+    borderColor: COLORS.primary + '30',
   },
   exportRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   exportTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.primaryDark,
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   exportDescription: {
     fontSize: 12,
-    color: COLORS.primaryDark,
-    lineHeight: 18,
-    opacity: 0.85,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   exportButton: {
     borderRadius: 12,
     backgroundColor: COLORS.primary,
   },
   exportButtonContent: {
-    paddingVertical: 4,
-    flexDirection: 'row-reverse',
+    paddingVertical: 6,
   },
   exportButtonText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#FFF',
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
   },
 });
