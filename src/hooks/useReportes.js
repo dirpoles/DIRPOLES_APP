@@ -225,40 +225,31 @@ export const useReportes = () => {
         inventario: reporteData.inventario || { total_insumos: 0, total_unidades: 0, estatus: [], tipos: [], lista: [] }
       });
 
-      // 1. Crear el PDF temporal
+      // 1. Crear el PDF temporal mediante el motor de impresión nativo
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       
-      // 2. Copiarlo a FileSystem.documentDirectory con extensión .pdf explícita
-      const pdfFilename = `Reporte_DIRPOLES_${Date.now()}.pdf`;
-      const targetUri = `${FileSystem.documentDirectory}${pdfFilename}`;
-      
-      await FileSystem.copyAsync({
-        from: uri,
-        to: targetUri
-      });
+      // 2. Intentar compartir el archivo directamente
+      let shareSuccess = false;
+      if (await Sharing.isAvailableAsync()) {
+        try {
+          await Sharing.shareAsync(uri, {
+            UTI: '.pdf',
+            mimeType: 'application/pdf',
+            dialogTitle: 'Guardar o Compartir Reporte PDF'
+          });
+          shareSuccess = true;
+        } catch (shareErr) {
+          console.log('[useReportes] shareAsync no disponible en este dispositivo, usando vista previa de impresión');
+        }
+      }
 
-      // 3. Abrir la hoja nativa de compartir
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(targetUri, {
-          UTI: '.pdf',
-          mimeType: 'application/pdf',
-          dialogTitle: 'Guardar o Compartir Reporte PDF'
-        });
-      } else {
-        // Respaldo mediante el diálogo de impresión nativo del sistema
+      // 3. Respaldo transparente: Si compartir no estuvo disponible o fue rechazado por el SO, abrir menú de impresión/Guardar PDF nativo
+      if (!shareSuccess) {
         await Print.printAsync({ html: htmlContent });
       }
     } catch (e) {
       console.error('[useReportes] Error exportando PDF:', e);
-      // Respaldo de seguridad: si falla FileProvider en Android, abrir menú de impresión directo
-      try {
-        if (htmlContent) {
-          await Print.printAsync({ html: htmlContent });
-        }
-      } catch (printErr) {
-        Alert.alert('Error', 'No se pudo generar o guardar el archivo PDF.');
-      }
+      Alert.alert('Error', 'No se pudo generar o guardar el archivo PDF.');
     } finally {
       setExportingingPdf(false);
     }
