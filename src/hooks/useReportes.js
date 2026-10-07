@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import reporteService from '../services/reporteService';
 import beneficiarioService from '../services/beneficiarioService';
 import citaService from '../services/citaService';
@@ -13,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
  * HOOK PERSONALIZADO: useReportes (SOLID: SRP)
  * 
  * Centraliza la carga de estadísticas enviando `reporte=general` y filtros de fecha
- * válidos al backend PHP DIRPOLES-4, con consolidación local defensiva.
+ * válidos al backend PHP DIRPOLES-4, con consolidación local defensiva y exportador PDF seguro.
  */
 export const useReportes = () => {
   const { user } = useAuth();
@@ -46,6 +47,17 @@ export const useReportes = () => {
   };
 
   /**
+   * Extrae arreglos de forma segura de cualquier formato de respuesta HTTP
+   */
+  const extractSafeArray = (res) => {
+    if (!res || !res.success) return [];
+    if (Array.isArray(res.data)) return res.data;
+    if (res.data && Array.isArray(res.data.data)) return res.data.data;
+    if (res.data && Array.isArray(res.data.datos)) return res.data.datos;
+    return [];
+  };
+
+  /**
    * Carga y procesa métricas del backend o listas locales
    */
   const fetchReportes = useCallback(async (isRefresh = false) => {
@@ -64,29 +76,28 @@ export const useReportes = () => {
       const resStatsMed = await reporteService.obtenerEstadisticas('medicina', filtrosFechas);
 
       // 2. Cargar listas de respaldo directamente de los servicios locales
-      // Nota: inventarioService expone consultar_inventario() (no obtenerTodos()).
       const [resBen, resCitas, resInv] = await Promise.all([
         beneficiarioService.obtenerTodos().catch(() => ({ success: false, data: [] })),
         citaService.consultar_citas().catch(() => ({ success: false, data: { data: [] } })),
         inventarioService.consultar_inventario().catch(() => ({ success: false, data: [] }))
       ]);
 
-      const listBen = (resBen && resBen.success && Array.isArray(resBen.data)) ? resBen.data : [];
-      const listCitas = (resCitas && resCitas.success && Array.isArray(resCitas.data?.data)) ? resCitas.data.data : [];
-      const listInv = (resInv && resInv.success && Array.isArray(resInv.data)) ? resInv.data : [];
+      const listBen = extractSafeArray(resBen);
+      const listCitas = extractSafeArray(resCitas);
+      const listInv = extractSafeArray(resInv);
 
-      // Filtrado por fecha en listas locales
-      const isDateInRange = (dateStr) => {
-        if (!dateStr) return true;
-        const d = dateStr.substring(0, 10);
+      // Filtrado defensivo por fecha en listas locales
+      const isDateInRange = (dateVal) => {
+        if (!dateVal) return true;
+        const d = String(dateVal).substring(0, 10);
         if (filtrosFechas.fecha_inicio && d < filtrosFechas.fecha_inicio) return false;
         if (filtrosFechas.fecha_fin && d > filtrosFechas.fecha_fin) return false;
         return true;
       };
 
-      const filteredBen = listBen.filter(b => isDateInRange(b.fecha_creacion || b.created_at));
-      const filteredCitas = listCitas.filter(c => isDateInRange(c.fecha || c.fecha_creacion));
-      const filteredInv = listInv.filter(i => isDateInRange(i.fecha_creacion || i.created_at));
+      const filteredBen = listBen.filter(b => isDateInRange(b?.fecha_creacion || b?.created_at));
+      const filteredCitas = listCitas.filter(c => isDateInRange(c?.fecha || c?.fecha_creacion));
+      const filteredInv = listInv.filter(i => isDateInRange(i?.fecha_creacion || i?.created_at));
 
       // A) Procesar Beneficiarios
       let femCount = 0;
@@ -94,11 +105,12 @@ export const useReportes = () => {
       const pnfMap = {};
 
       filteredBen.forEach(b => {
-        const g = (b.genero || b.sexo || '').toUpperCase();
+        if (!b) return;
+        const g = String(b.genero || b.sexo || '').toUpperCase();
         if (g === 'F') femCount++;
         if (g === 'M') mascCount++;
 
-        const pnfName = b.pnf || b.nombre_pnf || 'Sin PNF';
+        const pnfName = String(b.pnf || b.nombre_pnf || 'Sin PNF');
         pnfMap[pnfName] = (pnfMap[pnfName] || 0) + 1;
       });
 
@@ -123,7 +135,8 @@ export const useReportes = () => {
       // B) Procesar Citas
       const estadoMap = {};
       filteredCitas.forEach(c => {
-        const st = c.nombre_estado || c.estado || 'Pendiente';
+        if (!c) return;
+        const st = String(c.nombre_estado || c.estado || 'Pendiente');
         estadoMap[st] = (estadoMap[st] || 0) + 1;
       });
 
@@ -140,15 +153,12 @@ export const useReportes = () => {
       const estatusMap = {};
 
       filteredInv.forEach(i => {
-        const cant = parseInt(i.cantidad || i.stock || 0);
+        if (!i) return;
+        const cant = parseInt(i.cantidad || i.stock || 0) || 0;
         totalUnidades += cant;
         const st = cant > 5 ? 'Disponible' : cant > 0 ? 'Bajo Stock' : 'Agotado';
         estatusMap[st] = (estatusMap[st] || 0) + 1;
       });
-
-      if (resStatsMed && resStatsMed.success && resStatsMed.data?.insumos_total) {
-        // Aprovechar métricas de insumos del backend de medicina si existen
-      }
 
       const estatusArray = Object.keys(estatusMap).map(k => ({ estatus: k, total: estatusMap[k] }));
 
@@ -184,7 +194,9 @@ export const useReportes = () => {
   };
 
   /**
-   * Genera el PDF estilizado y dispara la hoja nativa para compartir/guardar
+   * Genera el PDF estilizado y dispara la hoja nativa para compartir/guardar.
+   * Copia el archivo a FileSystem.documentDirectory con extensión .pdf para
+   * cumplir estrictamente con los permisos de Android FileProvider.
    */
   const exportarPDF = async () => {
     if (!reporteData) {
@@ -193,6 +205,7 @@ export const useReportes = () => {
     }
 
     setExportingingPdf(true);
+    let htmlContent = '';
     try {
       const nombreUsuario = user ? `${user.nombre || ''} ${user.apellido || ''}`.trim() || user.correo : 'Usuario DIRPOLES';
       
@@ -203,7 +216,7 @@ export const useReportes = () => {
         hoy: 'Hoy'
       };
 
-      const htmlContent = generateReporteHTML({
+      htmlContent = generateReporteHTML({
         titulo: 'Reporte Estadístico Consolidado',
         usuario: nombreUsuario,
         periodo: etiquetasPeriodo[periodo] || 'Histórico General',
@@ -212,21 +225,40 @@ export const useReportes = () => {
         inventario: reporteData.inventario || { total_insumos: 0, total_unidades: 0, estatus: [], tipos: [], lista: [] }
       });
 
+      // 1. Crear el PDF temporal
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       
+      // 2. Copiarlo a FileSystem.documentDirectory con extensión .pdf explícita
+      const pdfFilename = `Reporte_DIRPOLES_${Date.now()}.pdf`;
+      const targetUri = `${FileSystem.documentDirectory}${pdfFilename}`;
+      
+      await FileSystem.copyAsync({
+        from: uri,
+        to: targetUri
+      });
+
+      // 3. Abrir la hoja nativa de compartir
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(targetUri, {
           UTI: '.pdf',
           mimeType: 'application/pdf',
-          dialogTitle: 'Exportar Reporte DIRPOLES'
+          dialogTitle: 'Guardar o Compartir Reporte PDF'
         });
       } else {
-        Alert.alert('Reporte PDF Generado', `Guardado en: ${uri}`);
+        // Respaldo mediante el diálogo de impresión nativo del sistema
+        await Print.printAsync({ html: htmlContent });
       }
     } catch (e) {
       console.error('[useReportes] Error exportando PDF:', e);
-      Alert.alert('Error', 'No se pudo generar el documento PDF.');
+      // Respaldo de seguridad: si falla FileProvider en Android, abrir menú de impresión directo
+      try {
+        if (htmlContent) {
+          await Print.printAsync({ html: htmlContent });
+        }
+      } catch (printErr) {
+        Alert.alert('Error', 'No se pudo generar o guardar el archivo PDF.');
+      }
     } finally {
       setExportingingPdf(false);
     }
