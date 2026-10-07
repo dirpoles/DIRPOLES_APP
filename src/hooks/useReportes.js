@@ -64,10 +64,11 @@ export const useReportes = () => {
       const resStatsMed = await reporteService.obtenerEstadisticas('medicina', filtrosFechas);
 
       // 2. Cargar listas de respaldo directamente de los servicios locales
+      // Nota: inventarioService expone consultar_inventario() (no obtenerTodos()).
       const [resBen, resCitas, resInv] = await Promise.all([
         beneficiarioService.obtenerTodos().catch(() => ({ success: false, data: [] })),
         citaService.consultar_citas().catch(() => ({ success: false, data: { data: [] } })),
-        inventarioService.obtenerTodos().catch(() => ({ success: false, data: [] }))
+        inventarioService.consultar_inventario().catch(() => ({ success: false, data: [] }))
       ]);
 
       const listBen = (resBen && resBen.success && Array.isArray(resBen.data)) ? resBen.data : [];
