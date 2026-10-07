@@ -65,12 +65,15 @@ export default function ReportesScreen() {
 
   // --- SECCIÓN: BENEFICIARIOS ---
   const renderBeneficiariosSection = () => {
-    const data = reporteData?.beneficiarios || { total: 0, genero: [], pnf: [] };
+    const data = reporteData?.beneficiarios || {};
+    const generoList = Array.isArray(data.genero) ? data.genero : [];
+    const pnfList = Array.isArray(data.pnf) ? data.pnf : [];
     
     // Calcular distribución de género
     let femeninoCount = 0;
     let masculinoCount = 0;
-    data.genero.forEach(g => {
+    generoList.forEach(g => {
+      if (!g) return;
       if (g.genero === 'F') femeninoCount = parseInt(g.total) || 0;
       if (g.genero === 'M') masculinoCount = parseInt(g.total) || 0;
     });
@@ -89,7 +92,7 @@ export default function ReportesScreen() {
             </View>
             <View style={styles.statCardText}>
               <Text style={styles.statLabel}>Beneficiarios Registrados</Text>
-              <Text style={styles.statNumber}>{data.total}</Text>
+              <Text style={styles.statNumber}>{data.total || 0}</Text>
             </View>
           </Card.Content>
         </Card>
@@ -139,20 +142,20 @@ export default function ReportesScreen() {
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
-            {data.pnf.length === 0 ? (
+            {pnfList.length === 0 ? (
               <Text style={styles.emptyText}>No hay datos de PNF registrados.</Text>
             ) : (
-              data.pnf.map((p, idx) => {
-                const maxVal = parseInt(data.pnf[0]?.total) || 1;
-                const progressPct = Math.round((parseInt(p.total) / maxVal) * 100);
+              pnfList.map((p, idx) => {
+                const maxVal = parseInt(pnfList[0]?.total) || 1;
+                const progressPct = Math.round((parseInt(p?.total || 0) / maxVal) * 100);
 
                 return (
                   <View key={idx} style={styles.progressRow}>
                     <View style={styles.progressRowHeader}>
                       <Text style={styles.progressRowName} numberOfLines={1}>
-                        {p.nombre_pnf || 'Desconocido'}
+                        {p?.nombre_pnf || 'Desconocido'}
                       </Text>
-                      <Text style={styles.progressRowVal}>{p.total}</Text>
+                      <Text style={styles.progressRowVal}>{p?.total || 0}</Text>
                     </View>
                     <View style={styles.progressBarBg}>
                       <View style={[styles.progressBarFill, { width: `${progressPct}%`, backgroundColor: COLORS.primary }]} />
@@ -169,10 +172,11 @@ export default function ReportesScreen() {
 
   // --- SECCIÓN: CITAS ---
   const renderCitasSection = () => {
-    const data = reporteData?.citas || { total: 0, estados: [] };
+    const data = reporteData?.citas || {};
+    const estadosList = Array.isArray(data.estados) ? data.estados : [];
 
     const getStatusConfig = (statusName) => {
-      const name = (statusName || '').toLowerCase();
+      const name = String(statusName || '').toLowerCase();
       if (name.includes('atendid')) return { color: COLORS.accent, icon: CheckCircle2 };
       if (name.includes('pendient') || name.includes('programad')) return { color: COLORS.info, icon: Clock };
       if (name.includes('confirmad')) return { color: COLORS.primary, icon: Sparkles };
@@ -189,7 +193,7 @@ export default function ReportesScreen() {
             </View>
             <View style={styles.statCardText}>
               <Text style={styles.statLabel}>Total Citas Agendadas</Text>
-              <Text style={styles.statNumber}>{data.total}</Text>
+              <Text style={styles.statNumber}>{data.total || 0}</Text>
             </View>
           </Card.Content>
         </Card>
@@ -203,13 +207,13 @@ export default function ReportesScreen() {
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
-            {data.estados.length === 0 ? (
+            {estadosList.length === 0 ? (
               <Text style={styles.emptyText}>No hay registros de citas.</Text>
             ) : (
-              data.estados.map((item, idx) => {
-                const config = getStatusConfig(item.estado);
-                const itemTotal = parseInt(item.total) || 0;
-                const totalPct = data.total > 0 ? Math.round((itemTotal / data.total) * 100) : 0;
+              estadosList.map((item, idx) => {
+                const config = getStatusConfig(item?.estado);
+                const itemTotal = parseInt(item?.total) || 0;
+                const totalPct = (data.total || 0) > 0 ? Math.round((itemTotal / data.total) * 100) : 0;
                 const StatusIcon = config.icon;
 
                 return (
@@ -217,7 +221,7 @@ export default function ReportesScreen() {
                     <View style={styles.progressRowHeader}>
                       <View style={styles.iconLabelGroup}>
                         <StatusIcon size={16} color={config.color} style={{ marginRight: 6 }} />
-                        <Text style={styles.progressRowName}>{item.estado}</Text>
+                        <Text style={styles.progressRowName}>{item?.estado || 'Desconocido'}</Text>
                       </View>
                       <Text style={styles.progressRowVal}>{itemTotal} ({totalPct}%)</Text>
                     </View>
@@ -236,7 +240,8 @@ export default function ReportesScreen() {
 
   // --- SECCIÓN: INVENTARIO MÉDICO ---
   const renderInventarioSection = () => {
-    const data = reporteData?.inventario || { total_insumos: 0, total_unidades: 0, estatus: [], tipos: [] };
+    const data = reporteData?.inventario || {};
+    const estatusList = Array.isArray(data.estatus) ? data.estatus : [];
 
     return (
       <View style={styles.sectionContainer}>
@@ -248,7 +253,7 @@ export default function ReportesScreen() {
                 <Package size={20} color={COLORS.primary} />
               </View>
               <Text style={styles.statLabel}>Insumos Distintos</Text>
-              <Text style={[styles.statNumber, { fontSize: 24 }]}>{data.total_insumos}</Text>
+              <Text style={[styles.statNumber, { fontSize: 24 }]}>{data.total_insumos || 0}</Text>
             </Card.Content>
           </Card>
 
@@ -258,7 +263,7 @@ export default function ReportesScreen() {
                 <TrendingUp size={20} color="#03543F" />
               </View>
               <Text style={styles.statLabel}>Total Unidades</Text>
-              <Text style={[styles.statNumber, { fontSize: 24, color: '#03543F' }]}>{data.total_unidades}</Text>
+              <Text style={[styles.statNumber, { fontSize: 24, color: '#03543F' }]}>{data.total_unidades || 0}</Text>
             </Card.Content>
           </Card>
         </View>
@@ -272,17 +277,17 @@ export default function ReportesScreen() {
             subtitleStyle={styles.cardSubtitle}
           />
           <Card.Content>
-            {data.estatus.length === 0 ? (
+            {estatusList.length === 0 ? (
               <Text style={styles.emptyText}>No hay datos de inventario.</Text>
             ) : (
-              data.estatus.map((item, idx) => {
-                const itemTotal = parseInt(item.total) || 0;
-                const totalPct = data.total_insumos > 0 ? Math.round((itemTotal / data.total_insumos) * 100) : 0;
+              estatusList.map((item, idx) => {
+                const itemTotal = parseInt(item?.total) || 0;
+                const totalPct = (data.total_insumos || 0) > 0 ? Math.round((itemTotal / data.total_insumos) * 100) : 0;
 
                 return (
                   <View key={idx} style={styles.progressRow}>
                     <View style={styles.progressRowHeader}>
-                      <Text style={styles.progressRowName}>{item.estatus}</Text>
+                      <Text style={styles.progressRowName}>{item?.estatus || 'Sin estatus'}</Text>
                       <Text style={styles.progressRowVal}>{itemTotal} insumos ({totalPct}%)</Text>
                     </View>
                     <View style={styles.progressBarBg}>
