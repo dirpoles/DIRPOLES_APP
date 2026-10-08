@@ -47,6 +47,15 @@ export default function ReportesScreen() {
     error,
     periodo,
     setPeriodo,
+    generoFiltro,
+    setGeneroFiltro,
+    pnfFiltro,
+    setPnfFiltro,
+    estadoInvFiltro,
+    setEstadoInvFiltro,
+    stockInvFiltro,
+    setStockInvFiltro,
+    pnfOptions,
     handleRefresh,
     exportarPDF
   } = useReportes();
@@ -397,38 +406,112 @@ export default function ReportesScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* FILTROS ADICIONALES ESPECÍFICOS POR MÓDULO */}
+        {(activeSegment === 'beneficiarios' || activeSegment === 'citas') && (
+          <View style={styles.subFilterSection}>
+            {/* Filtro de Género */}
+            <View style={styles.subFilterRow}>
+              <Text style={styles.subFilterTitle}>Género:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'F', label: 'Femenino' },
+                  { id: 'M', label: 'Masculino' },
+                ].map(g => (
+                  <Chip
+                    key={g.id}
+                    selected={generoFiltro === g.id}
+                    onPress={() => setGeneroFiltro(g.id)}
+                    style={[styles.subChip, generoFiltro === g.id && styles.chipActive]}
+                    textStyle={[styles.subChipText, generoFiltro === g.id && styles.chipTextActive]}
+                  >
+                    {g.label}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Filtro de PNF */}
+            <View style={styles.subFilterRow}>
+              <Text style={styles.subFilterTitle}>PNF:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                <Chip
+                  selected={pnfFiltro === 'todos'}
+                  onPress={() => setPnfFiltro('todos')}
+                  style={[styles.subChip, pnfFiltro === 'todos' && styles.chipActive]}
+                  textStyle={[styles.subChipText, pnfFiltro === 'todos' && styles.chipTextActive]}
+                >
+                  Todos
+                </Chip>
+                {pnfOptions.map(pnfName => (
+                  <Chip
+                    key={pnfName}
+                    selected={pnfFiltro === pnfName}
+                    onPress={() => setPnfFiltro(pnfName)}
+                    style={[styles.subChip, pnfFiltro === pnfName && styles.chipActive]}
+                    textStyle={[styles.subChipText, pnfFiltro === pnfName && styles.chipTextActive]}
+                  >
+                    {pnfName}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
+        {activeSegment === 'inventario' && (
+          <View style={styles.subFilterSection}>
+            {/* Filtro de Estado del Insumo */}
+            <View style={styles.subFilterRow}>
+              <Text style={styles.subFilterTitle}>Estado:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'Disponible', label: 'Disponible' },
+                  { id: 'Vencido', label: 'Vencido' },
+                ].map(st => (
+                  <Chip
+                    key={st.id}
+                    selected={estadoInvFiltro === st.id}
+                    onPress={() => setEstadoInvFiltro(st.id)}
+                    style={[styles.subChip, estadoInvFiltro === st.id && styles.chipActive]}
+                    textStyle={[styles.subChipText, estadoInvFiltro === st.id && styles.chipTextActive]}
+                  >
+                    {st.label}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Filtro de Nivel de Stock */}
+            <View style={styles.subFilterRow}>
+              <Text style={styles.subFilterTitle}>Stock:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'disponible', label: 'Suficiente (>5)' },
+                  { id: 'bajo', label: 'Bajo (1-5)' },
+                  { id: 'agotado', label: 'Agotado (0)' },
+                ].map(sk => (
+                  <Chip
+                    key={sk.id}
+                    selected={stockInvFiltro === sk.id}
+                    onPress={() => setStockInvFiltro(sk.id)}
+                    style={[styles.subChip, stockInvFiltro === sk.id && styles.chipActive]}
+                    textStyle={[styles.subChipText, stockInvFiltro === sk.id && styles.chipTextActive]}
+                  >
+                    {sk.label}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
         {/* CONTENIDO SEGÚN SEGMENTO */}
         {activeSegment === 'beneficiarios' && renderBeneficiariosSection()}
         {activeSegment === 'citas' && renderCitasSection()}
         {activeSegment === 'inventario' && renderInventarioSection()}
-
-        {/* CARD FOOTER: BOTÓN DE EXPORTAR PDF */}
-        <Card style={styles.exportCard}>
-          <Card.Content>
-            <View style={styles.exportRow}>
-              <FileText size={28} color={COLORS.primary} style={{ marginRight: 12 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.exportTitle}>Generar Informe PDF Formal</Text>
-                <Text style={styles.exportDescription}>
-                  Exporta las estadísticas consolidadas con formato ejecutivo para presentar ante las autoridades o compartir por WhatsApp y correo.
-                </Text>
-              </View>
-            </View>
-            <Divider style={{ marginVertical: 14 }} />
-            <Button
-              mode="contained"
-              onPress={exportarPDF}
-              loading={exportingingPdf}
-              disabled={exportingingPdf}
-              style={styles.exportButton}
-              contentStyle={styles.exportButtonContent}
-              labelStyle={styles.exportButtonText}
-              icon={() => <Download color="#FFF" size={18} />}
-            >
-              Exportar Reporte a PDF
-            </Button>
-          </Card.Content>
-        </Card>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -707,5 +790,32 @@ const styles = StyleSheet.create({
   exportButtonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  subFilterSection: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 8,
+  },
+  subFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subFilterTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    width: 60,
+  },
+  subChip: {
+    backgroundColor: COLORS.background,
+    height: 28,
+  },
+  subChipText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
   },
 });

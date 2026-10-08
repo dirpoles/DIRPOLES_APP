@@ -6,6 +6,7 @@ export const generateReporteHTML = ({
   titulo = 'Reporte Estadístico Consolidado',
   usuario = 'Administrador',
   periodo = 'Todos los Tiempos',
+  filtrosAplicados = [],
   beneficiarios = { total: 0, genero: [], pnf: [], lista: [] },
   citas = { total: 0, estados: [], lista: [] },
   inventario = { total_insumos: 0, total_unidades: 0, estatus: [], lista: [] },
@@ -16,6 +17,10 @@ export const generateReporteHTML = ({
     month: 'long',
     day: 'numeric'
   });
+
+  const filtrosBadges = Array.isArray(filtrosAplicados) && filtrosAplicados.length > 0
+    ? filtrosAplicados.map(f => `<span class="filter-tag">${f}</span>`).join(' ')
+    : `<span class="filter-tag">Sin filtros adicionales</span>`;
 
   return `
 <!DOCTYPE html>
@@ -35,7 +40,7 @@ export const generateReporteHTML = ({
     .header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       border-bottom: 3px solid #1E40AF;
       padding-bottom: 15px;
       margin-bottom: 25px;
@@ -52,6 +57,17 @@ export const generateReporteHTML = ({
       font-weight: bold;
       color: #1E40AF;
       margin: 4px 0;
+    }
+    .filter-tag {
+      display: inline-block;
+      background: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-right: 4px;
     }
     .meta-box {
       text-align: right;
@@ -149,7 +165,8 @@ export const generateReporteHTML = ({
     <div>
       <div class="institution">UPTAEB — Dirección de Políticas Estudiantiles</div>
       <div class="title">${titulo}</div>
-      <div style="font-size: 11px; color: #64748B;">Período Evaluado: <strong>${periodo}</strong></div>
+      <div style="font-size: 11px; color: #64748B; margin-top: 4px;">Período: <strong>${periodo}</strong></div>
+      <div style="margin-top: 6px;">${filtrosBadges}</div>
     </div>
     <div class="meta-box">
       <div>Fecha de Emisión: <strong>${fechaHoy}</strong></div>
@@ -160,7 +177,7 @@ export const generateReporteHTML = ({
   <div class="grid">
     <div class="card">
       <div class="card-num">${beneficiarios.total}</div>
-      <div class="card-title">Beneficiarios Registrados</div>
+      <div class="card-title">Beneficiarios Evaluados</div>
     </div>
     <div class="card">
       <div class="card-num">${citas.total}</div>
@@ -168,7 +185,7 @@ export const generateReporteHTML = ({
     </div>
     <div class="card">
       <div class="card-num">${inventario.total_insumos}</div>
-      <div class="card-title">Insumos en Stock (${inventario.total_unidades} Unid.)</div>
+      <div class="card-title">Insumos Evaluados (${inventario.total_unidades} Unid.)</div>
     </div>
   </div>
 
@@ -183,7 +200,7 @@ export const generateReporteHTML = ({
     <tbody>
       ${
         beneficiarios.pnf.length === 0
-          ? '<tr><td colspan="2">No hay registros de PNF para mostrar</td></tr>'
+          ? '<tr><td colspan="2">No hay registros de PNF para los filtros seleccionados</td></tr>'
           : beneficiarios.pnf.map(p => `
             <tr>
               <td>${p.nombre_pnf || 'Desconocido'}</td>
@@ -205,7 +222,7 @@ export const generateReporteHTML = ({
     <tbody>
       ${
         citas.estados.length === 0
-          ? '<tr><td colspan="2">No hay información de citas registrada</td></tr>'
+          ? '<tr><td colspan="2">No hay citas registradas para los filtros seleccionados</td></tr>'
           : citas.estados.map(e => `
             <tr>
               <td><span class="badge badge-blue">${e.estado}</span></td>
@@ -220,14 +237,14 @@ export const generateReporteHTML = ({
   <table>
     <thead>
       <tr>
-        <th>Estatus de Stock</th>
+        <th>Estatus / Nivel de Stock</th>
         <th>Total Insumos</th>
       </tr>
     </thead>
     <tbody>
       ${
         inventario.estatus.length === 0
-          ? '<tr><td colspan="2">No hay movimientos de inventario registrados</td></tr>'
+          ? '<tr><td colspan="2">No hay insumos registrados para los filtros seleccionados</td></tr>'
           : inventario.estatus.map(s => `
             <tr>
               <td><span class="badge badge-green">${s.estatus}</span></td>

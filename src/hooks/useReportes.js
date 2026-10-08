@@ -13,8 +13,8 @@ import { useAuth } from '../context/AuthContext';
 /**
  * HOOK PERSONALIZADO: useReportes (SOLID: SRP)
  * 
- * Centraliza la carga de estadísticas enviando `reporte=general` y filtros de fecha
- * válidos al backend PHP DIRPOLES-4, con consolidación local defensiva y exportador PDF seguro.
+ * Centraliza la carga de estadísticas, filtrado dinámico multicriterio
+ * (Período, Género, PNF, Estado y Nivel de Stock) y exportador PDF nativo.
  */
 export const useReportes = () => {
   const { user } = useAuth();
@@ -23,7 +23,15 @@ export const useReportes = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [exportingingPdf, setExportingingPdf] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Estados de Filtros Dinámicos
   const [periodo, setPeriodo] = useState('todos'); // 'todos', 'mes', 'semana', 'hoy'
+  const [generoFiltro, setGeneroFiltro] = useState('todos'); // 'todos', 'F', 'M'
+  const [pnfFiltro, setPnfFiltro] = useState('todos'); // 'todos' o nombre del PNF
+  const [estadoInvFiltro, setEstadoInvFiltro] = useState('todos'); // 'todos', 'Disponible', 'Vencido'
+  const [stockInvFiltro, setStockInvFiltro] = useState('todos'); // 'todos', 'disponible', 'bajo', 'agotado'
+  
+  const [pnfOptions, setPnfOptions] = useState([]);
 
   /**
    * Helper para calcular el rango de fechas en formato YYYY-MM-DD
@@ -58,7 +66,7 @@ export const useReportes = () => {
   };
 
   /**
-   * Carga y procesa métricas del backend o listas locales
+   * Carga y procesa métricas del backend o listas locales aplicando todos los filtros activos
    */
   const fetchReportes = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -71,11 +79,7 @@ export const useReportes = () => {
     try {
       const filtrosFechas = getFiltroFechas(periodo);
 
-      // 1. Consultar estadísticas generales del backend PHP (reporte=general)
-      const resStatsGen = await reporteService.obtenerEstadisticas('general', filtrosFechas);
-      const resStatsMed = await reporteService.obtenerEstadisticas('medicina', filtrosFechas);
-
-      // 2. Cargar listas de respaldo directamente de los servicios locales
+      // Cargar listas de respaldo directamente de los servicios locales
       const [resBen, resCitas, resInv] = await Promise.all([
         beneficiarioService.obtenerTodos().catch(() => ({ success: false, data: [] })),
         citaService.consultar_citas().catch(() => ({ success: false, data: { data: [] } })),
@@ -86,7 +90,15 @@ export const useReportes = () => {
       const listCitas = extractSafeArray(resCitas);
       const listInv = extractSafeArray(resInv);
 
-      // Filtrado defensivo por fecha en listas locales
+      // Extraer lista única de PNFs disponibles para el selector
+      const pnfSet = new Set();
+      listBen.forEach(b => {
+        const pName = b?.pnf || b?.nombre_pnf;
+        if (pName) pnfSet.add(pName);
+      });
+      setPnfOptions(Array.from(pnfSet));
+
+      // Evaluador de rango de fecha
       const isDateInRange = (dateVal) => {
         if (!dateVal) return true;
         const d = String(dateVal).substring(0, 10);
@@ -95,17 +107,70 @@ export const useReportes = () => {
         return true;
       };
 
-      const filteredBen = listBen.filter(b => isDateInRange(b?.fecha_creacion || b?.created_at));
-      const filteredCitas = listCitas.filter(c => isDateInRange(c?.fecha || c?.fecha_creacion));
-      const filteredInv = listInv.filter(i => isDateInRange(i?.fecha_creacion || i?.created_at));
+      // 1. Filtrar Beneficiarios (Fecha + Género + PNF)
+      const filteredBen = listBen.filter(b => {
+        if (!b) return false;
+        if (!isDateInRange(b.fecha_creacion || b.created_at)) return false;
+        
+        if (generoFiltro !== 'todos') {
+          const g = String(b.genero || b.sexo || '').toUpperCase();
+          if (g !== generoFiltro) return false;
+        }
 
-      // A) Procesar Beneficiarios
+        if (pnfFiltro !== 'todos') {
+          const p = String(b.pnf || b.nombre_pnf || '');
+          if (p !== pnfFiltro) return false;
+        }
+
+        return true;
+      });
+
+      // 2. Filtrar Citas (Fecha + Género del paciente + PNF del paciente)
+      const filteredCitas = listCitas.filter(c => {
+        if (!c) return false;
+        if (!isDateInRange(c.fecha || c.fecha_creacion)) return false;
+
+        if (generoFiltro !== 'todos') {
+          const g = String(c.beneficiario_genero || c.genero || c.sexo || '').toUpperCase();
+          if (g && g !== generoFiltro) return false;
+        }
+
+        if (pnfFiltro !== 'todos') {
+          const p = String(c.beneficiario_pnf || c.pnf || '');
+          if (p && p !== pnfFiltro) return false;
+        }
+
+        return true;
+      });
+
+      // 3. Filtrar Inventario (Fecha + Estado + Nivel de Stock)
+      const filteredInv = listInv.filter(i => {
+        if (!i) return false;
+        if (!isDateInRange(i.fecha_creacion || i.created_at)) return false;
+
+        if (estadoInvFiltro !== 'todos') {
+          const st = String(i.estatus || i.estado || '');
+          if (st.toLowerCase() !== estadoInvFiltro.toLowerCase()) return false;
+        }
+
+        if (stockInvFiltro !== 'todos') {
+          const cant = parseInt(i.cantidad || i.stock || 0) || 0;
+          if (stockInvFiltro === 'disponible' && cant <= 5) return false;
+          if (stockInvFiltro === 'bajo' && (cant === 0 || cant > 5)) return false;
+          if (stockInvFiltro === 'agotado' && cant !== 0) return false;
+        }
+
+        return true;
+      });
+
+      // --- CÁLCULO DE MÉTRICAS CONSOLIDADAS ---
+
+      // A) Beneficiarios
       let femCount = 0;
       let mascCount = 0;
       const pnfMap = {};
 
       filteredBen.forEach(b => {
-        if (!b) return;
         const g = String(b.genero || b.sexo || '').toUpperCase();
         if (g === 'F') femCount++;
         if (g === 'M') mascCount++;
@@ -115,12 +180,6 @@ export const useReportes = () => {
       });
 
       const pnfArray = Object.keys(pnfMap).map(k => ({ nombre_pnf: k, total: pnfMap[k] }));
-
-      // Si el backend devolvió datos válidos de género en resStatsGen
-      if (resStatsGen && resStatsGen.success && resStatsGen.data) {
-        if (resStatsGen.data.mujeres !== undefined) femCount = resStatsGen.data.mujeres;
-        if (resStatsGen.data.hombres !== undefined) mascCount = resStatsGen.data.hombres;
-      }
 
       const beneficiariosData = {
         total: filteredBen.length,
@@ -132,10 +191,9 @@ export const useReportes = () => {
         lista: filteredBen
       };
 
-      // B) Procesar Citas
+      // B) Citas
       const estadoMap = {};
       filteredCitas.forEach(c => {
-        if (!c) return;
         const st = String(c.nombre_estado || c.estado || 'Pendiente');
         estadoMap[st] = (estadoMap[st] || 0) + 1;
       });
@@ -148,12 +206,11 @@ export const useReportes = () => {
         lista: filteredCitas
       };
 
-      // C) Procesar Inventario
+      // C) Inventario
       let totalUnidades = 0;
       const estatusMap = {};
 
       filteredInv.forEach(i => {
-        if (!i) return;
         const cant = parseInt(i.cantidad || i.stock || 0) || 0;
         totalUnidades += cant;
         const st = cant > 5 ? 'Disponible' : cant > 0 ? 'Bajo Stock' : 'Agotado';
@@ -183,7 +240,7 @@ export const useReportes = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [periodo]);
+  }, [periodo, generoFiltro, pnfFiltro, estadoInvFiltro, stockInvFiltro]);
 
   useEffect(() => {
     fetchReportes();
@@ -194,9 +251,7 @@ export const useReportes = () => {
   };
 
   /**
-   * Genera el PDF estilizado y dispara la hoja nativa para compartir/guardar.
-   * Copia el archivo a FileSystem.documentDirectory con extensión .pdf para
-   * cumplir estrictamente con los permisos de Android FileProvider.
+   * Genera el PDF con todos los filtros aplicados reflejados explícitamente en la cabecera
    */
   const exportarPDF = async () => {
     if (!reporteData) {
@@ -216,19 +271,25 @@ export const useReportes = () => {
         hoy: 'Hoy'
       };
 
+      // Compilar etiquetas de filtros activos para la cabecera del PDF
+      const activeFiltersList = [];
+      if (generoFiltro !== 'todos') activeFiltersList.push(`Género: ${generoFiltro === 'F' ? 'Femenino' : 'Masculino'}`);
+      if (pnfFiltro !== 'todos') activeFiltersList.push(`PNF: ${pnfFiltro}`);
+      if (estadoInvFiltro !== 'todos') activeFiltersList.push(`Estado Stock: ${estadoInvFiltro}`);
+      if (stockInvFiltro !== 'todos') activeFiltersList.push(`Nivel Stock: ${stockInvFiltro.toUpperCase()}`);
+
       htmlContent = generateReporteHTML({
         titulo: 'Reporte Estadístico Consolidado',
         usuario: nombreUsuario,
         periodo: etiquetasPeriodo[periodo] || 'Histórico General',
+        filtrosAplicados: activeFiltersList,
         beneficiarios: reporteData.beneficiarios || { total: 0, genero: [], pnf: [], lista: [] },
         citas: reporteData.citas || { total: 0, estados: [], lista: [] },
         inventario: reporteData.inventario || { total_insumos: 0, total_unidades: 0, estatus: [], tipos: [], lista: [] }
       });
 
-      // 1. Crear el PDF temporal mediante el motor de impresión nativo
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       
-      // 2. Intentar compartir el archivo directamente
       let shareSuccess = false;
       if (await Sharing.isAvailableAsync()) {
         try {
@@ -243,7 +304,6 @@ export const useReportes = () => {
         }
       }
 
-      // 3. Respaldo transparente: Si compartir no estuvo disponible o fue rechazado por el SO, abrir menú de impresión/Guardar PDF nativo
       if (!shareSuccess) {
         await Print.printAsync({ html: htmlContent });
       }
@@ -263,6 +323,15 @@ export const useReportes = () => {
     error,
     periodo,
     setPeriodo,
+    generoFiltro,
+    setGeneroFiltro,
+    pnfFiltro,
+    setPnfFiltro,
+    estadoInvFiltro,
+    setEstadoInvFiltro,
+    stockInvFiltro,
+    setStockInvFiltro,
+    pnfOptions,
     handleRefresh,
     exportarPDF
   };
