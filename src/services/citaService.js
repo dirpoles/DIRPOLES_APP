@@ -322,15 +322,22 @@ const citaService = {
 
       return {
         success: data.exito === true || data.estado === 'exito',
-        message: data.mensaje || 'Cita cancelada correctamente',
+        message: data.mensaje || 'Cita eliminada correctamente',
       };
     } catch (error) {
       console.error('[CitaService] desactivar:', error.message);
       return {
         success: false,
-        message: error.normalizedMessage || 'Error al cancelar la cita',
+        message: error.normalizedMessage || 'Error al eliminar la cita',
       };
     }
+  },
+
+  /**
+   * Alias explícito para eliminar cita.
+   */
+  eliminar: async (id_cita) => {
+    return citaService.desactivar(id_cita);
   },
 };
 

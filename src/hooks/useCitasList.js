@@ -70,12 +70,24 @@ export const useCitasList = () => {
         setSearchQuery(query);
     };
 
+    /**
+     * Elimina una cita a través del servicio y recarga la lista.
+     */
+    const eliminarCita = async (id_cita) => {
+        const result = await citaService.eliminar(id_cita);
+        if (result.success) {
+            await fetchCitas();
+        }
+        return result;
+    };
+
     return {
         citas: filteredCitas,
         loading,
         error,
         searchQuery,
         handleSearch,
+        eliminarCita,
         refetch: fetchCitas
     };
 };

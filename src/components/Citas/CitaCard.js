@@ -7,7 +7,7 @@ import {
     Clock, 
     User, 
     Edit, 
-    Info 
+    Trash2 
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 
@@ -16,9 +16,9 @@ import { COLORS } from '../../constants/config';
  * Molde visual para una cita individual.
  * - Click en el card abre editar.
  * - Badge dinámico según nombre_estado.
- * - Botón eliminar reemplazado por informativo.
+ * - Menú con opciones Editar y Eliminar Cita.
  */
-const CitaCard = ({ item, onEditPress, onInfoPress }) => {
+const CitaCard = ({ item, onEditPress, onDeletePress }) => {
     const [visible, setVisible] = React.useState(false);
     const openMenu = () => setVisible(true);
     const closeMenu = () => setVisible(false);
@@ -109,10 +109,10 @@ const CitaCard = ({ item, onEditPress, onInfoPress }) => {
                             />
                             <Divider />
                             <Menu.Item
-                                onPress={() => { onInfoPress(item); closeMenu(); }}
-                                title="Información"
-                                titleStyle={{ color: COLORS.textSecondary }}
-                                leadingIcon={() => <Info size={20} color={COLORS.textSecondary} />}
+                                onPress={() => { closeMenu(); onDeletePress(item); }}
+                                title="Eliminar Cita"
+                                titleStyle={{ color: COLORS.danger }}
+                                leadingIcon={() => <Trash2 size={20} color={COLORS.danger} />}
                             />
                         </Menu>
                     </View>

@@ -31,6 +31,14 @@ export const validateCitaFormSync = (formData) => {
 
   if (!formData.hora) {
     errors.hora = 'La hora es obligatoria';
+  } else {
+    const parts = formData.hora.split(':');
+    if (parts.length >= 2) {
+      const minutes = parseInt(parts[1], 10);
+      if (minutes !== 0 && minutes !== 30) {
+        errors.hora = 'Las citas deben iniciarse en punto o en media hora (00 o 30 min)';
+      }
+    }
   }
 
   // Reglas de precedencia (orden lógico)

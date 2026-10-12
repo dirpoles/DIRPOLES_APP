@@ -9,20 +9,17 @@ import {
 import { 
   Text, 
   FAB, 
-  Searchbar,
-  Portal,
-  Dialog,
-  Button
+  Searchbar
 } from 'react-native-paper';
 import { 
   User,
-  UserPlus, 
-  AlertTriangle
+  UserPlus
 } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 import { useBeneficiariosList } from '../../hooks/useBeneficiariosList';
 import beneficiarioService from '../../services/beneficiarioService';
 import BeneficiarioCard from './BeneficiarioCard';
+import CustomModal from '../UI/CustomModal';
 
 /**
  * COMPONENTE: BeneficiarioList
@@ -42,6 +39,7 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
   const [deleteDialogVisible, setDeleteDialogVisible] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [feedbackModal, setFeedbackModal] = React.useState({ visible: false, title: '', message: '', type: 'info' });
 
   const showDeleteDialog = (item) => {
     setItemToDelete(item);
@@ -60,14 +58,31 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
     setIsDeleting(true);
     try {
       const result = await beneficiarioService.desactivar(itemToDelete.id_beneficiario);
+      hideDeleteDialog();
       if (result.success) {
-        hideDeleteDialog();
+        setFeedbackModal({
+          visible: true,
+          title: '¡Operación Exitosa!',
+          message: result.message || 'Beneficiario desactivado correctamente.',
+          type: 'success'
+        });
         refetch();
       } else {
-        alert(result.message || 'No se pudo desactivar el beneficiario');
+        setFeedbackModal({
+          visible: true,
+          title: 'Error',
+          message: result.message || 'No se pudo desactivar el beneficiario.',
+          type: 'error'
+        });
       }
     } catch (error) {
-      alert('Error de conexión al desactivar');
+      hideDeleteDialog();
+      setFeedbackModal({
+        visible: true,
+        title: 'Error de Conexión',
+        message: 'No se pudo conectar con el servidor para desactivar.',
+        type: 'error'
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -132,37 +147,27 @@ const BeneficiarioList = ({ onAddPress, onEditPress }) => {
         color="#FFF"
       />
 
-      {/* DIALOGO DE CONFIRMACIÓN DE ELIMINACIÓN */}
-      <Portal>
-        <Dialog visible={deleteDialogVisible} onDismiss={hideDeleteDialog} style={styles.dialog}>
-          <Dialog.Title style={styles.dialogTitle}>
-            <View style={styles.titleRow}>
-              <AlertTriangle color={COLORS.danger} size={24} />
-              <Text style={styles.titleText}>Confirmar Desactivación</Text>
-            </View>
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text style={styles.dialogContent}>
-              ¿Está seguro que desea desactivar a <Text style={{fontWeight: '700'}}>{itemToDelete?.nombre_completo || itemToDelete?.nombres}</Text>?
-            </Text>
-            <Text style={styles.dialogSubContent}>
-              El registro permanecerá en el sistema pero figurará como "Inactivo".
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={hideDeleteDialog} labelStyle={{color: COLORS.textSecondary}}>Cancelar</Button>
-            <Button 
-              onPress={confirmDelete} 
-              loading={isDeleting}
-              disabled={isDeleting}
-              mode="contained"
-              style={{backgroundColor: COLORS.danger}}
-            >
-              Desactivar
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {/* MODAL DE CONFIRMACIÓN DE DESACTIVACIÓN */}
+      <CustomModal
+        visible={deleteDialogVisible}
+        onClose={hideDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Confirmar Desactivación"
+        message={`¿Está seguro que desea desactivar a "${itemToDelete?.nombre_completo || itemToDelete?.nombres || 'este beneficiario'}"?\n\nEl registro permanecerá en el sistema pero figurará como "Inactivo".`}
+        type="warning"
+        confirmText={isDeleting ? 'Desactivando...' : 'Desactivar'}
+        cancelText="Cancelar"
+      />
+
+      {/* MODAL DE FEEDBACK / RESULTADO */}
+      <CustomModal
+        visible={feedbackModal.visible}
+        onClose={() => setFeedbackModal(prev => ({ ...prev, visible: false }))}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        type={feedbackModal.type}
+        buttonText="Entendido"
+      />
     </View>
   );
 };
@@ -237,35 +242,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
-  dialog: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-  },
-  dialogTitle: {
-    paddingBottom: 0,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  dialogContent: {
-    fontSize: 16,
-    color: COLORS.text,
-    lineHeight: 22,
-    marginTop: 10,
-  },
-  dialogSubContent: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 12,
-    fontStyle: 'italic',
-  }
 });
 
 export default BeneficiarioList;

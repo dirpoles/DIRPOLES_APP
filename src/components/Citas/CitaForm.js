@@ -124,8 +124,11 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
 
   const handleConfirmTime = (date) => {
     const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    handleChange('hora', `${hours}:${minutes}`);
+    let minutes = date.getMinutes();
+    // Ajustar estrictamente a múltiplos de 30 minutos (00 o 30)
+    minutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
+    const minutesStr = minutes.toString().padStart(2, '0');
+    handleChange('hora', `${hours}:${minutesStr}`);
     setTimePickerVisibility(false);
   };
 
@@ -286,6 +289,7 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
               left={props => <List.Icon {...props} icon={() => <Clock color={COLORS.primary} size={24} />} />}
             />
           </Card>
+          <Text style={styles.intervalHintText}>Intervalos: :00 o :30 min</Text>
           <HelperText type="error" visible={!!errors.hora}>
             {errors.hora}
           </HelperText>
@@ -329,6 +333,7 @@ const CitaForm = ({ initialData = null, onSubmit = null }) => {
       <DateTimePickerModal
         isVisible={isTimePickerVisible}
         mode="time"
+        minuteInterval={30}
         onConfirm={handleConfirmTime}
         onCancel={() => setTimePickerVisibility(false)}
       />
@@ -583,6 +588,13 @@ const styles = StyleSheet.create({
   },
   selectedItem: {
     backgroundColor: COLORS.primaryLight,
+  },
+  intervalHintText: {
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 

@@ -31,21 +31,71 @@ const CitaList = ({ onAddPress, onEditPress }) => {
     error, 
     searchQuery, 
     handleSearch, 
+    eliminarCita,
     refetch 
   } = useCitasList();
 
-  // Estado para el modal informativo (reemplazo del eliminar)
-  const [infoModalVisible, setInfoModalVisible] = React.useState(false);
+  // Estados para modal de confirmación y feedback
+  const [citaToDelete, setCitaToDelete] = React.useState(null);
+  const [confirmModalVisible, setConfirmModalVisible] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [feedbackModal, setFeedbackModal] = React.useState({ visible: false, title: '', message: '', type: 'info' });
 
-  const showInfoModal = () => {
-    setInfoModalVisible(true);
+  const handleDeletePress = (item) => {
+    // REGLA DE NEGOCIO: No se pueden eliminar citas con estado 'Atendida'
+    if (item.nombre_estado?.toLowerCase() === 'atendida') {
+      setFeedbackModal({
+        visible: true,
+        title: 'Acción No Permitida',
+        message: 'No es posible eliminar una cita que ya fue marcada como "Atendida", ya que forma parte del historial médico y de atención del paciente.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    setCitaToDelete(item);
+    setConfirmModalVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!citaToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await eliminarCita(citaToDelete.id_cita);
+      setConfirmModalVisible(false);
+      if (res.success) {
+        setFeedbackModal({
+          visible: true,
+          title: '¡Cita Eliminada!',
+          message: res.message || 'La cita ha sido eliminada exitosamente del sistema.',
+          type: 'success'
+        });
+      } else {
+        setFeedbackModal({
+          visible: true,
+          title: 'Error al Eliminar',
+          message: res.message || 'No se pudo eliminar la cita.',
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      setConfirmModalVisible(false);
+      setFeedbackModal({
+        visible: true,
+        title: 'Error de Conexión',
+        message: 'No se pudo conectar con el servidor para eliminar la cita.',
+        type: 'error'
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const renderItem = ({ item }) => (
     <CitaCard 
       item={item} 
       onEditPress={onEditPress} 
-      onInfoPress={showInfoModal}
+      onDeletePress={handleDeletePress}
     />
   );
 
@@ -100,13 +150,25 @@ const CitaList = ({ onAddPress, onEditPress }) => {
         color="#FFF"
       />
 
-      {/* MODAL INFORMATIVO */}
+      {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
       <CustomModal
-        visible={infoModalVisible}
-        onClose={() => setInfoModalVisible(false)}
-        title="Información"
-        message="Para eliminar o cancelar una cita, por favor acceda al sistema web desde un computador."
-        type="info"
+        visible={confirmModalVisible}
+        onClose={() => setConfirmModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar Cita"
+        message={`¿Está seguro que desea eliminar la cita de "${citaToDelete?.beneficiario || 'este paciente'}" programada para el ${citaToDelete?.fecha_formateada || citaToDelete?.fecha || ''} a las ${citaToDelete?.hora_formateada || citaToDelete?.hora || ''}?`}
+        type="warning"
+        confirmText={isDeleting ? 'Eliminando...' : 'Eliminar'}
+        cancelText="Cancelar"
+      />
+
+      {/* MODAL DE FEEDBACK / ESTADO */}
+      <CustomModal
+        visible={feedbackModal.visible}
+        onClose={() => setFeedbackModal(prev => ({ ...prev, visible: false }))}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        type={feedbackModal.type}
         buttonText="Entendido"
       />
     </View>
