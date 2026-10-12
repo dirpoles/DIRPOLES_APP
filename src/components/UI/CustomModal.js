@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { CheckCircle2, XCircle, Info, AlertTriangle, HelpCircle } from 'lucide-react-native';
 import { COLORS } from '../../constants/config';
 
