@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import inventarioService from '../services/inventarioService';
 import { useAuth } from '../context/AuthContext';
 import { validateInsumoField, validateInsumoFormSync } from '../utils/inventarioValidation';
+import { getValidationErrorModalConfig } from '../utils/formErrorHelper';
 
 /**
  * CUSTOM HOOK: useInsumoForm (SOLID: Separación de Lógica)
@@ -88,12 +89,11 @@ export const useInsumoForm = (initialState = {}) => {
 
     if (!isValid) {
       setErrors(validationErrors);
-      setModalConfig({
-        title: 'Formulario Incompleto',
-        message: 'Por favor, corrige los campos resaltados antes de continuar.',
-        type: 'warning'
-      });
-      setModalVisible(true);
+      const modalCfg = getValidationErrorModalConfig(validationErrors);
+      if (modalCfg) {
+        setModalConfig(modalCfg);
+        setModalVisible(true);
+      }
       return;
     }
 

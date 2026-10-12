@@ -10,6 +10,7 @@ import {
   isMinAge, 
   isValidSectionNumber 
 } from '../utils/validators';
+import { getValidationErrorModalConfig } from '../utils/formErrorHelper';
 
 /**
  * CUSTOM HOOK: useBeneficiarioForm (SOLID: Separación de Lógica)
@@ -219,12 +220,11 @@ export const useBeneficiarioForm = (initialState = {}) => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setModalConfig({
-        title: 'Formulario Incompleto',
-        message: 'Por favor, corrige los errores resaltados antes de guardar.',
-        type: 'warning'
-      });
-      setModalVisible(true);
+      const modalCfg = getValidationErrorModalConfig(newErrors);
+      if (modalCfg) {
+        setModalConfig(modalCfg);
+        setModalVisible(true);
+      }
       return;
     }
 

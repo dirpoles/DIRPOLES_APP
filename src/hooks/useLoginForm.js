@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { isRequired, isValidEmail, isValidPassword } from '../utils/validators';
+import { getValidationErrorModalConfig } from '../utils/formErrorHelper';
 
 /**
  * CUSTOM HOOK: useLoginForm (SOLID: Separación de Lógica)
@@ -57,13 +58,13 @@ export const useLoginForm = () => {
     const errorPass = validateField('password', formData.password);
 
     if (errorCorreo || errorPass) {
-      setErrors({ correo: errorCorreo, password: errorPass });
-      setModalConfig({
-        title: 'Formulario Incompleto',
-        message: 'Por favor, corrige los errores en el formulario antes de continuar.',
-        type: 'warning'
-      });
-      setModalVisible(true);
+      const newErrors = { correo: errorCorreo, password: errorPass };
+      setErrors(newErrors);
+      const modalCfg = getValidationErrorModalConfig(newErrors);
+      if (modalCfg) {
+        setModalConfig(modalCfg);
+        setModalVisible(true);
+      }
       return;
     }
 

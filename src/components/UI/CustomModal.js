@@ -38,6 +38,7 @@ const CustomModal = ({
 
   const theme = getTheme();
   const isQuestion = type === 'question' || !!onConfirm;
+  const hasBullets = typeof message === 'string' && (message.includes('•') || message.includes('\n'));
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -49,7 +50,20 @@ const CustomModal = ({
 
           <View style={styles.content}>
             <Text style={styles.title}>{title}</Text>
-            <Text style={styles.message}>{message}</Text>
+            {hasBullets ? (
+              <View style={styles.bulletListContainer}>
+                <ScrollView 
+                  style={styles.bulletListScroll} 
+                  contentContainerStyle={styles.bulletListContent}
+                  showsVerticalScrollIndicator={true}
+                  nestedScrollEnabled={true}
+                >
+                  <Text style={styles.bulletMessage}>{message}</Text>
+                </ScrollView>
+              </View>
+            ) : (
+              <Text style={styles.message}>{message}</Text>
+            )}
           </View>
 
           {/* Área de Botones */}
@@ -84,9 +98,32 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   modalContainer: { width: '100%', maxWidth: 340, backgroundColor: COLORS.surface, borderRadius: 28, padding: 24, alignItems: 'center', elevation: 10 },
   iconContainer: { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  content: { alignItems: 'center', marginBottom: 28 },
-  title: { fontSize: 22, fontWeight: 'bold', color: COLORS.text, textAlign: 'center', marginBottom: 10 },
-  message: { fontSize: 15, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+  content: { alignItems: 'center', marginBottom: 24, width: '100%' },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, textAlign: 'center', marginBottom: 10 },
+  message: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 21 },
+  bulletListContainer: {
+    width: '100%',
+    maxHeight: 220,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  bulletListScroll: {
+    width: '100%',
+  },
+  bulletListContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bulletMessage: {
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 20,
+    textAlign: 'left',
+  },
   buttonRow: { flexDirection: 'row', width: '100%' },
   buttonColumn: { width: '100%' },
   button: { 

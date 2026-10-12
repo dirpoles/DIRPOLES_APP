@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import citaService from '../services/citaService';
 import { validateCitaFormSync, getDiaSemana, isPastDate } from '../utils/citasValidation';
+import { getValidationErrorModalConfig } from '../utils/formErrorHelper';
 
 /**
  * CUSTOM HOOK: useCitaForm
@@ -143,7 +144,8 @@ export const useCitaForm = (initialData = null, onSuccess = null) => {
 
     if (Object.keys(finalErrors).length > 0) {
       setErrors(finalErrors);
-      return { success: false, message: 'Por favor corrija los errores del formulario' };
+      const modalCfg = getValidationErrorModalConfig(finalErrors);
+      return { success: false, message: modalCfg ? modalCfg.message : 'Por favor corrija los errores del formulario' };
     }
 
     // 2. Re-validar fecha y hora contra el backend antes de enviar

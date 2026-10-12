@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import perfilService from '../services/perfilService';
 import { useAuth } from '../context/AuthContext';
 import { validatePerfilField, validatePerfilFormSync } from '../utils/perfilValidation';
+import { getValidationErrorModalConfig } from '../utils/formErrorHelper';
 
 /**
  * CUSTOM HOOK: usePerfil (SOLID: SRP)
@@ -97,12 +98,11 @@ export const usePerfil = () => {
 
     if (!isValid) {
       setErrors(validationErrors);
-      setModalConfig({
-        title: 'Campos Inválidos',
-        message: 'Por favor, corrige los errores del formulario para poder continuar.',
-        type: 'warning'
-      });
-      setModalVisible(true);
+      const modalCfg = getValidationErrorModalConfig(validationErrors);
+      if (modalCfg) {
+        setModalConfig(modalCfg);
+        setModalVisible(true);
+      }
       return;
     }
 
