@@ -73,9 +73,9 @@ export const useLoginForm = () => {
       const result = await login(formData.correo, formData.password);
       if (!result.success) {
         setModalConfig({
-          title: 'Error de Acceso',
+          title: result.isUnauthorizedRole ? 'Acceso No Autorizado' : 'Error de Acceso',
           message: result.message,
-          type: 'error'
+          type: result.isUnauthorizedRole ? 'warning' : 'error'
         });
         setModalVisible(true);
       }

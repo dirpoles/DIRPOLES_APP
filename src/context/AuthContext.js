@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import * as SecureStore from 'expo-secure-store';
 import authService from '../services/authService';
 import { setLogoutHandler } from '../services/api';
+import { isMobileAccessAuthorized } from '../utils/permissions';
 
 /**
  * CONTEXTO DE AUTENTICACIÓN
@@ -45,6 +46,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const session = await authService.checkSession();
       if (session.isAuthenticated) {
+        // Verificar que el usuario almacenado pertenezca a los roles permitidos en la app móvil
+        if (!isMobileAccessAuthorized(session.user)) {
+          await authService.logout();
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
         setUser(session.user);
         setIsAuthenticated(true);
       }
@@ -60,12 +68,24 @@ export const AuthProvider = ({ children }) => {
    *
    * @param {string} correo
    * @param {string} password
-   * @returns {Promise<{success: boolean, user: object|null, message: string}>}
+   * @returns {Promise<{success: boolean, user: object|null, message: string, isUnauthorizedRole?: boolean}>}
    */
   const login = async (correo, password) => {
     const result = await authService.login(correo, password);
 
     if (result.success) {
+      // Validar si el rol tiene acceso a la aplicación móvil (Administrador, Médico, Psicólogo)
+      if (!isMobileAccessAuthorized(result.user)) {
+        await authService.logout();
+        const roleName = result.user?.tipo_empleado || result.user?.nombre_tipo || result.user?.tipo || result.user?.rol || 'No asignado';
+        return {
+          success: false,
+          user: null,
+          isUnauthorizedRole: true,
+          message: `Acceso restringido: Esta aplicación móvil está disponible únicamente para personal Administrador, Médico y Psicólogo.\n\nTu cargo actual (${roleName}) no cuenta con autorización para acceder a la aplicación móvil.`,
+        };
+      }
+
       setUser(result.user);
       setIsAuthenticated(true);
     }
