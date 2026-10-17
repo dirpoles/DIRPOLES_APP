@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Users, CalendarDays, Package, BarChart3, User, LogOut } from 'lucide-react-native';
 import { COLORS } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +26,7 @@ const Tab = createBottomTabNavigator();
  * según la matriz de permisos por rol de usuario (Médico, Psicólogo, Admin).
  */
 export default function TabNavigator() {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [permissionModal, setPermissionModal] = useState({
@@ -32,6 +34,11 @@ export default function TabNavigator() {
     title: '',
     message: ''
   });
+
+  // Cálculo dinámico para evitar que la barra se meta entre los botones de navegación o quede pegada al borde
+  const bottomInset = insets.bottom;
+  const paddingBottom = bottomInset > 0 ? bottomInset + 6 : 12;
+  const tabHeight = 54 + paddingBottom;
 
   /**
    * Listener centralizado para validar permisos al tocar una pestaña
@@ -80,17 +87,24 @@ export default function TabNavigator() {
           ),
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: COLORS.textMuted,
+          tabBarHideOnKeyboard: Platform.OS === 'android',
           tabBarStyle: {
-            height: 65,
-            paddingBottom: 10,
-            paddingTop: 10,
+            height: tabHeight,
+            paddingBottom: paddingBottom,
+            paddingTop: 8,
             backgroundColor: COLORS.surface,
             borderTopWidth: 1,
             borderTopColor: COLORS.border,
+            elevation: 8,
           },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '600',
+            marginTop: 2,
+          },
+          tabBarItemStyle: {
+            justifyContent: 'center',
+            alignItems: 'center',
           }
         })}
       >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LogBox } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -9,6 +10,7 @@ LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
   'InteractionManager has been deprecated',
   'Please refactor long tasks into smaller ones',
+  "use 'requestIdleCallback' instead",
   'DateTimePicker:',
   'onChange',
   'onValueChange',
@@ -19,16 +21,19 @@ LogBox.ignoreLogs([
  * PUNTO DE ENTRADA PRINCIPAL
  * 
  * Envolvemos la aplicación en los proveedores necesarios:
- * 1. AuthProvider: Maneja el estado global de autenticación.
- * 2. PaperProvider: Maneja los temas y componentes de UI.
+ * 1. SafeAreaProvider: Mide e inyecta los insets nativos (notch, barras de navegación del sistema, gestos).
+ * 2. AuthProvider: Maneja el estado global de autenticación.
+ * 3. PaperProvider: Maneja los temas y componentes de UI.
  */
 export default function App() {
   return (
-    <AuthProvider>
-      <PaperProvider>
-        <AppNavigator />
-      </PaperProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <PaperProvider>
+          <AppNavigator />
+        </PaperProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
