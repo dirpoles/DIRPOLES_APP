@@ -184,13 +184,27 @@ api.interceptors.response.use(
       }
     }
 
-    // ----- Normalización del mensaje de error de negocio -----
+    // ----- Normalización del mensaje de error de negocio y red -----
     // El backend retorna: { "exito": false, "error": { "codigo": "...", "mensaje": "..." } }
-    const normalizedMessage =
+    let normalizedMessage =
       error.response?.data?.error?.mensaje ||
-      error.response?.data?.mensaje ||
-      error.message ||
-      'Error de conexión con el servidor';
+      error.response?.data?.mensaje;
+
+    if (!normalizedMessage) {
+      if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+        normalizedMessage = 'Tiempo de espera agotado. El servidor en la nube tardó demasiado en responder. Revisa tu conexión a internet e inténtalo de nuevo.';
+      } else if (error.message === 'Network Error' || !error.response) {
+        normalizedMessage = 'No se pudo conectar con el servidor en la nube (AWS). Verifica tu conexión a internet o datos móviles.';
+      } else if (error.response?.status === 403) {
+        normalizedMessage = 'No cuentas con los permisos necesarios para realizar esta acción.';
+      } else if (error.response?.status === 404) {
+        normalizedMessage = 'El recurso solicitado no fue encontrado en el servidor.';
+      } else if (error.response?.status >= 500) {
+        normalizedMessage = 'Ocurrió un error interno en el servidor. Por favor, inténtalo más tarde.';
+      } else {
+        normalizedMessage = error.message || 'Error de conexión con el servidor';
+      }
+    }
 
     // Adjuntamos el mensaje normalizado para facilitar su lectura en los servicios
     error.normalizedMessage = normalizedMessage;

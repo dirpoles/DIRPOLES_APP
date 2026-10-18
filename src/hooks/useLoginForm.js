@@ -72,8 +72,13 @@ export const useLoginForm = () => {
     try {
       const result = await login(formData.correo, formData.password);
       if (!result.success) {
+        const isNetwork = result.isNetworkError || result.message?.toLowerCase().includes('conexión') || result.message?.toLowerCase().includes('servidor en la nube');
         setModalConfig({
-          title: result.isUnauthorizedRole ? 'Acceso No Autorizado' : 'Error de Acceso',
+          title: result.isUnauthorizedRole 
+            ? 'Acceso No Autorizado' 
+            : isNetwork 
+              ? 'Sin Conexión con el Servidor' 
+              : 'Error de Acceso',
           message: result.message,
           type: result.isUnauthorizedRole ? 'warning' : 'error'
         });
@@ -81,8 +86,8 @@ export const useLoginForm = () => {
       }
     } catch (error) {
       setModalConfig({
-        title: 'Error Inesperado',
-        message: 'No se pudo conectar con el servidor.',
+        title: 'Error de Conexión',
+        message: 'No se pudo conectar con el servidor en la nube (AWS). Verifica tu conexión a internet.',
         type: 'error'
       });
       setModalVisible(true);

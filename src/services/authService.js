@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { BASE_URL, API_URL, STORAGE_KEYS } from '../constants/config';
+import { BASE_URL, API_URL, STORAGE_KEYS, APP_CONFIG } from '../constants/config';
 import { encryptRSA } from '../utils/rsaEncrypt';
 
 /**
@@ -43,7 +43,7 @@ const authService = {
         `${BASE_URL}/iniciar_sesion`,
         { correo, password: encryptedPassword },
         {
-          timeout: 10000,
+          timeout: APP_CONFIG.defaultTimeout,
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         },
       );
@@ -74,6 +74,8 @@ const authService = {
     } catch (error) {
       console.error('[AuthService] login error:', error.message);
       let message;
+      let isNetworkError = false;
+
       if (error.response) {
         // El servidor respondió con un código de estado fuera del rango 2xx (ej: 400 Bad Request, 401 Unauthorized, 500)
         message =
@@ -85,13 +87,16 @@ const authService = {
           (error.response.status === 400 || error.response.status === 401
             ? 'Correo o contraseña incorrectos. Por favor, verifica tus datos.'
             : `Error en el servidor (${error.response.status}). Inténtalo más tarde.`);
-      } else if (error.request) {
-        // La petición fue enviada pero no se recibió respuesta (error de red)
-        message = 'No se pudo conectar con el servidor.\nVerifica que el servidor esté encendido y que estés en la misma red WiFi.';
+      } else if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+        isNetworkError = true;
+        message = 'Tiempo de espera agotado al conectar con el servidor en la nube (AWS).\nPor favor, verifica tu conexión a internet o datos móviles e inténtalo nuevamente.';
+      } else if (error.request || error.message === 'Network Error') {
+        isNetworkError = true;
+        message = 'No se pudo conectar con el servidor en la nube (AWS).\nVerifica que tu dispositivo tenga acceso a internet (datos móviles o Wi-Fi) e inténtalo nuevamente.';
       } else {
         message = error.message || 'Error inesperado al intentar iniciar sesión.';
       }
-      return { success: false, user: null, message };
+      return { success: false, user: null, message, isNetworkError };
     }
   },
 

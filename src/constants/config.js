@@ -7,7 +7,7 @@
  * Cambia la IP por la dirección de tu servidor local o de producción.
  * Ejemplo local: 'http://192.168.50.100/DIRPOLES-4'
  */
-export const BASE_URL = 'http://192.168.50.100/DIRPOLES-4';
+export const BASE_URL = 'https://dirpoles.duckdns.org';
 
 /**
  * Prefijo de la API REST de DIRPOLES-4.
@@ -49,7 +49,7 @@ export const COLORS = {
 export const APP_CONFIG = {
   name:           'DIRPOLES Mobile',
   version:        '2.0.0',
-  defaultTimeout: 10000, // ms
+  defaultTimeout: 15000, // ms (15s para estabilidad con AWS en redes móviles)
 };
 
 // ============================================
